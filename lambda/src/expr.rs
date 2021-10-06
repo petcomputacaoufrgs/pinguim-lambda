@@ -2,6 +2,8 @@ use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::mem;
 use std::mem::ManuallyDrop;
+use std::rc::Rc;
+use std::sync::Arc;
 
 pub trait Symbol
 where
@@ -14,38 +16,86 @@ impl<S> Symbol for S where
 {
 }
 
-#[derive(Debug)]
-pub enum Expr<S>
-where
-    S: Symbol,
-{
-    Var(S),
-    App(Nested<S>, Nested<S>),
-    Lam(S, Nested<S>),
-}
+pub trait Expr: Sized {
+    type Symbol: Symbol;
 
-impl<S> Default for Expr<S>
-where
-    S: Symbol,
-{
-    fn default() -> Self {
-        Expr::Var(S::default())
+    fn from_data(data: ExprData<Self>) -> Self;
+
+    fn data(&self) -> &ExprData<Self>;
+
+    fn try_data_mut(&mut self) -> Option<&mut ExprData<Self>>;
+
+    fn try_take_data(&mut self) -> Option<ExprData<Self>>;
+
+    fn try_into_data(mut self) -> Result<ExprData<Self>, Self> {
+        self.try_take_data().ok_or(self)
+    }
+
+    fn drop_in_place(&mut self) {
+        let mut drop_stack = Vec::new();
+
+        drop_stack.extend(self.try_take_data());
+
+        while let Some(expr) = drop_stack.pop() {
+            match expr {
+                ExprData::Var(_) => (),
+                ExprData::App(fun, arg) => {
+                    drop_stack.extend(fun.try_into_data());
+                    drop_stack.extend(arg.try_into_data());
+                }
+                ExprData::Lam(_, body) => {
+                    drop_stack.extend(body.try_into_data())
+                }
+            }
+        }
     }
 }
 
-impl<S> Clone for Expr<S>
+#[derive(Debug)]
+pub enum ExprData<E>
 where
-    S: Symbol,
+    E: Expr,
 {
-    fn clone(&self) -> Self {
-        enum Operation<'input, S>
+    Var(E::Symbol),
+    App(E, E),
+    Lam(E::Symbol, E),
+}
+
+impl<E> Default for ExprData<E>
+where
+    E: Expr,
+{
+    fn default() -> Self {
+        ExprData::Var(E::Symbol::default())
+    }
+}
+
+impl<E> ExprData<E>
+where
+    E: Expr,
+{
+    pub fn shallow_clone(&self) -> Self
+    where
+        E: Clone,
+    {
+        match self {
+            ExprData::Var(symbol) => ExprData::Var(symbol.clone()),
+            ExprData::App(fun, arg) => ExprData::App(fun.clone(), arg.clone()),
+            ExprData::Lam(arg, body) => {
+                ExprData::Lam(arg.clone(), body.clone())
+            }
+        }
+    }
+
+    pub fn deep_clone(&self) -> Self {
+        enum Operation<'input, E>
         where
-            S: Symbol,
+            E: Expr,
         {
-            Clone(&'input Expr<S>),
-            CloneAppArg(&'input Expr<S>),
-            MakeApp(Expr<S>),
-            MakeLam(S),
+            Clone(&'input ExprData<E>),
+            CloneAppArg(&'input ExprData<E>),
+            MakeApp(ExprData<E>),
+            MakeLam(E::Symbol),
         }
 
         let mut op_stack = vec![Operation::Clone(self)];
@@ -54,17 +104,17 @@ where
         while let Some(operation) = op_stack.pop() {
             match operation {
                 Operation::Clone(input) => match input {
-                    Expr::Var(symbol) => {
-                        let expr = Expr::Var(symbol.clone());
+                    ExprData::Var(symbol) => {
+                        let expr = ExprData::Var(symbol.clone());
                         output = Some(expr);
                     }
-                    Expr::App(fun, arg) => {
-                        op_stack.push(Operation::CloneAppArg(arg.expr()));
-                        op_stack.push(Operation::Clone(fun.expr()));
+                    ExprData::App(fun, arg) => {
+                        op_stack.push(Operation::CloneAppArg(arg.data()));
+                        op_stack.push(Operation::Clone(fun.data()));
                     }
-                    Expr::Lam(arg, body) => {
+                    ExprData::Lam(arg, body) => {
                         op_stack.push(Operation::MakeLam(arg.clone()));
-                        op_stack.push(Operation::Clone(body.expr()));
+                        op_stack.push(Operation::Clone(body.data()));
                     }
                 },
 
@@ -77,14 +127,15 @@ where
 
                 Operation::MakeApp(fun) => {
                     let arg = output.take().expect("cloning app requires arg");
-                    let expr = Expr::App(Nested::new(fun), Nested::new(arg));
+                    let expr =
+                        ExprData::App(E::from_data(fun), E::from_data(arg));
                     output = Some(expr);
                 }
 
                 Operation::MakeLam(arg) => {
                     let body =
                         output.take().expect("cloning lam requires body");
-                    let expr = Expr::Lam(arg, Nested::new(body));
+                    let expr = ExprData::Lam(arg, E::from_data(body));
                     output = Some(expr);
                 }
             }
@@ -94,9 +145,18 @@ where
     }
 }
 
-impl<S> PartialEq for Expr<S>
+impl<E> Clone for ExprData<E>
 where
-    S: Symbol,
+    E: Expr,
+{
+    fn clone(&self) -> Self {
+        self.deep_clone()
+    }
+}
+
+impl<E> PartialEq for ExprData<E>
+where
+    E: Expr,
 {
     fn eq(&self, other: &Self) -> bool {
         let mut equals = true;
@@ -104,25 +164,25 @@ where
 
         while let Some((left, right)) = pairs.pop().filter(|_| equals) {
             match (left, right) {
-                (Expr::Var(symbol_left), Expr::Var(symbol_right)) => {
+                (ExprData::Var(symbol_left), ExprData::Var(symbol_right)) => {
                     equals = symbol_left == symbol_right;
                 }
 
                 (
-                    Expr::App(fun_left, arg_left),
-                    Expr::App(fun_right, arg_right),
+                    ExprData::App(fun_left, arg_left),
+                    ExprData::App(fun_right, arg_right),
                 ) => {
-                    pairs.push((arg_left.expr(), arg_right.expr()));
-                    pairs.push((fun_left.expr(), fun_right.expr()));
+                    pairs.push((arg_left.data(), arg_right.data()));
+                    pairs.push((fun_left.data(), fun_right.data()));
                 }
 
                 (
-                    Expr::Lam(arg_left, body_left),
-                    Expr::Lam(arg_right, body_right),
+                    ExprData::Lam(arg_left, body_left),
+                    ExprData::Lam(arg_right, body_right),
                 ) => {
                     equals = arg_left == arg_right;
                     if equals {
-                        pairs.push((body_left.expr(), body_right.expr()));
+                        pairs.push((body_left.data(), body_right.data()));
                     }
                 }
 
@@ -134,20 +194,20 @@ where
     }
 }
 
-impl<S> Eq for Expr<S> where S: Symbol {}
+impl<E> Eq for ExprData<E> where E: Expr {}
 
-impl<S> PartialOrd for Expr<S>
+impl<E> PartialOrd for ExprData<E>
 where
-    S: Symbol,
+    E: Expr,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<S> Ord for Expr<S>
+impl<E> Ord for ExprData<E>
 where
-    S: Symbol,
+    E: Expr,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         let mut ordering = Ordering::Equal;
@@ -156,32 +216,36 @@ where
         while let Some((left, right)) = pairs.pop().filter(|_| ordering.is_eq())
         {
             match (left, right) {
-                (Expr::Var(symbol_left), Expr::Var(symbol_right)) => {
+                (ExprData::Var(symbol_left), ExprData::Var(symbol_right)) => {
                     ordering = symbol_left.cmp(symbol_right);
                 }
 
                 (
-                    Expr::App(fun_left, arg_left),
-                    Expr::App(fun_right, arg_right),
+                    ExprData::App(fun_left, arg_left),
+                    ExprData::App(fun_right, arg_right),
                 ) => {
-                    pairs.push((arg_left.expr(), arg_right.expr()));
-                    pairs.push((fun_left.expr(), fun_right.expr()));
+                    pairs.push((arg_left.data(), arg_right.data()));
+                    pairs.push((fun_left.data(), fun_right.data()));
                 }
 
                 (
-                    Expr::Lam(arg_left, body_left),
-                    Expr::Lam(arg_right, body_right),
+                    ExprData::Lam(arg_left, body_left),
+                    ExprData::Lam(arg_right, body_right),
                 ) => {
                     ordering = arg_left.cmp(&arg_right);
                     if ordering.is_eq() {
-                        pairs.push((body_left.expr(), body_right.expr()));
+                        pairs.push((body_left.data(), body_right.data()));
                     }
                 }
 
-                (Expr::Var(_), _) => ordering = Ordering::Less,
-                (Expr::App(_, _), Expr::Var(_)) => ordering = Ordering::Greater,
-                (Expr::App(_, _), Expr::Lam(_, _)) => ordering = Ordering::Less,
-                (Expr::Lam(_, _), _) => ordering = Ordering::Greater,
+                (ExprData::Var(_), _) => ordering = Ordering::Less,
+                (ExprData::App(_, _), ExprData::Var(_)) => {
+                    ordering = Ordering::Greater
+                }
+                (ExprData::App(_, _), ExprData::Lam(_, _)) => {
+                    ordering = Ordering::Less
+                }
+                (ExprData::Lam(_, _), _) => ordering = Ordering::Greater,
             }
         }
 
@@ -189,9 +253,9 @@ where
     }
 }
 
-impl<S> Hash for Expr<S>
+impl<E> Hash for ExprData<E>
 where
-    S: Symbol,
+    E: Expr,
 {
     fn hash<H>(&self, state: &mut H)
     where
@@ -201,18 +265,18 @@ where
 
         while let Some(expr) = target_stack.pop() {
             match expr {
-                Expr::Var(var) => {
+                ExprData::Var(var) => {
                     state.write_u8(0);
                     var.hash(state);
                 }
-                Expr::App(fun, arg) => {
+                ExprData::App(fun, arg) => {
                     state.write_u8(1);
-                    target_stack.push(fun.expr());
-                    target_stack.push(arg.expr());
+                    target_stack.push(fun.data());
+                    target_stack.push(arg.data());
                 }
-                Expr::Lam(_, body) => {
+                ExprData::Lam(_, body) => {
                     state.write_u8(2);
-                    target_stack.push(body.expr())
+                    target_stack.push(body.data())
                 }
             }
         }
@@ -220,63 +284,142 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct Nested<S>
+pub struct BoxedExpr<S>
 where
     S: Symbol,
 {
-    expr: ManuallyDrop<Box<Expr<S>>>,
+    data: ManuallyDrop<Box<ExprData<Self>>>,
 }
 
-impl<S> From<Expr<S>> for Nested<S>
+impl<S> Expr for BoxedExpr<S>
 where
     S: Symbol,
 {
-    fn from(expr: Expr<S>) -> Self {
-        Self::new(expr)
+    type Symbol = S;
+
+    fn from_data(data: ExprData<Self>) -> Self {
+        Self { data: ManuallyDrop::new(Box::new(data)) }
+    }
+
+    fn data(&self) -> &ExprData<Self> {
+        &**self.data
+    }
+
+    fn try_data_mut(&mut self) -> Option<&mut ExprData<Self>> {
+        Some(self.data_mut())
+    }
+
+    fn try_take_data(&mut self) -> Option<ExprData<Self>> {
+        Some(self.take_data())
+    }
+
+    fn try_into_data(self) -> Result<ExprData<Self>, Self> {
+        Ok(self.into_data())
     }
 }
 
-impl<S> Nested<S>
+impl<S> BoxedExpr<S>
 where
     S: Symbol,
 {
-    pub fn new(expr: Expr<S>) -> Self {
-        Self { expr: ManuallyDrop::new(Box::new(expr)) }
+    pub fn data_mut(&mut self) -> &mut ExprData<Self> {
+        &mut **self.data
     }
 
-    pub fn expr(&self) -> &Expr<S> {
-        &**self.expr
+    pub fn take_data(&mut self) -> ExprData<Self> {
+        mem::take(self.data_mut())
     }
 
-    pub fn expr_mut(&mut self) -> &mut Expr<S> {
-        &mut **self.expr
-    }
-
-    pub fn take_expr(&mut self) -> Expr<S> {
-        mem::take(self.expr_mut())
-    }
-
-    pub fn into_expr(mut self) -> Expr<S> {
-        self.take_expr()
+    pub fn into_data(mut self) -> ExprData<Self> {
+        self.take_data()
     }
 }
 
-impl<S> Drop for Nested<S>
+impl<S> Drop for BoxedExpr<S>
 where
     S: Symbol,
 {
     fn drop(&mut self) {
-        let mut drop_stack = vec![self.take_expr()];
+        self.drop_in_place();
+    }
+}
 
-        while let Some(expr) = drop_stack.pop() {
-            match expr {
-                Expr::Var(_) => (),
-                Expr::App(fun, arg) => {
-                    drop_stack.push(fun.into_expr());
-                    drop_stack.push(arg.into_expr());
-                }
-                Expr::Lam(_, body) => drop_stack.push(body.into_expr()),
-            }
-        }
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct RcExpr<S>
+where
+    S: Symbol,
+{
+    data: Rc<ExprData<Self>>,
+}
+
+impl<S> Expr for RcExpr<S>
+where
+    S: Symbol,
+{
+    type Symbol = S;
+
+    fn from_data(data: ExprData<Self>) -> Self {
+        Self { data: Rc::new(data) }
+    }
+
+    fn data(&self) -> &ExprData<Self> {
+        &*self.data
+    }
+
+    fn try_data_mut(&mut self) -> Option<&mut ExprData<Self>> {
+        Rc::get_mut(&mut self.data)
+    }
+
+    fn try_take_data(&mut self) -> Option<ExprData<Self>> {
+        self.try_data_mut().map(mem::take)
+    }
+}
+
+impl<S> Drop for RcExpr<S>
+where
+    S: Symbol,
+{
+    fn drop(&mut self) {
+        self.drop_in_place();
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct ArcExpr<S>
+where
+    S: Symbol,
+{
+    data: Arc<ExprData<Self>>,
+}
+
+impl<S> Expr for ArcExpr<S>
+where
+    S: Symbol,
+{
+    type Symbol = S;
+
+    fn from_data(data: ExprData<Self>) -> Self {
+        Self { data: Arc::new(data) }
+    }
+
+    fn data(&self) -> &ExprData<Self> {
+        &*self.data
+    }
+
+    fn try_data_mut(&mut self) -> Option<&mut ExprData<Self>> {
+        Arc::get_mut(&mut self.data)
+    }
+
+    fn try_take_data(&mut self) -> Option<ExprData<Self>> {
+        self.try_data_mut().map(mem::take)
+    }
+}
+
+impl<S> Drop for ArcExpr<S>
+where
+    S: Symbol,
+{
+    fn drop(&mut self) {
+        self.drop_in_place();
     }
 }
