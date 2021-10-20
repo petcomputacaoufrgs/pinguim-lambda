@@ -112,6 +112,7 @@ where
     /// Performs a deep clone of the expression kind, even if the wrapper `E` is
     /// reference counted.
     pub fn deep_clone(&self) -> Self {
+        #[derive(Debug)]
         enum Operation<'input, E>
         where
             E: Expression,
