@@ -3,6 +3,7 @@ name = "lambda-wasm"
 version = "0.1.0"
 authors = ["brunoczim <brunoczim@gmail.com>"]
 edition = "2018"
+workspace = "../"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -30,7 +31,3 @@ wee_alloc = { version = "0.4.5", optional = true }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
-
-[profile.release]
-# Tell `rustc` to optimize for small code size.
-opt-level = "s"

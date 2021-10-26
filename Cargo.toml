@@ -1,2 +1,6 @@
 [workspace]
 members = ["./lambda", "./lambda-wasm"]
+
+[profile.release.package.lambda-wasm]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"
