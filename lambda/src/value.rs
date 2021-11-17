@@ -82,24 +82,45 @@ impl Value {
     /// ```
     /// λa. (λb. a b)
     /// ```
-    pub fn replace(&mut self, target: &str, value: &Self) {
+    pub fn replace(&mut self, target_var: &str, new_value: &Self) {
         match self {
             Value::Variable(variable) => {
-                if variable == target {
-                    *self = value.clone();
+                if variable == target_var {
+                    *self = new_value.clone();
                 }
             }
 
             Value::Application { function, argument } => {
-                function.replace(target, value);
-                argument.replace(target, value);
+                function.replace(target_var, new_value);
+                argument.replace(target_var, new_value);
             }
 
             Value::Lambda { parameter, body } => {
-                if parameter != target {
-                    body.replace(target, value);
+                if parameter != target_var {
+                    body.replace(target_var, new_value);
                 }
             }
         }
+    }
+
+    pub fn reduce_one(&mut self) -> bool {
+        match self {
+            Value::Variable(_) => false,
+
+            Value::Application { function, argument } => {
+                if let Value::Lambda { parameter, body } = function.as_mut() {
+                    body.replace(parameter, argument);
+                    true
+                } else {
+                    function.reduce_one() || argument.reduce_one()
+                }
+            }
+
+            Value::Lambda { parameter: _, body } => body.reduce_one(),
+        }
+    }
+
+    pub fn reduce(&mut self) {
+        while self.reduce_one() {}
     }
 }
