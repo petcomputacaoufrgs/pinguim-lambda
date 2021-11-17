@@ -1,5 +1,7 @@
 //! Exporta um valor do cálculo Lambda.
 
+use std::collections::HashSet;
+
 /// `λa. λb. λc. a b c`
 /// <=>
 /// `λa. (λb. (λc. (a b) c))`
@@ -122,5 +124,21 @@ impl Value {
 
     pub fn reduce(&mut self) {
         while self.reduce_one() {}
+    }
+
+    pub fn unbounded_vars(&self) -> HashSet<&str> {
+        let mut unbounded_set = HashSet::new();
+        let mut bounded_set = HashSet::new();
+
+        self.unbounded_vars_at(&mut unbounded_set, &mut bounded_set);
+        unbounded_set
+    }
+
+    fn unbounded_vars_at(
+        &self,
+        unbounded_set: &mut HashSet<&str>,
+        bounded_set: &mut HashSet<&str>,
+    ) {
+        todo!()
     }
 }
