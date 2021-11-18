@@ -99,6 +99,13 @@ impl Value {
 
             Value::Lambda { parameter, body } => {
                 if parameter != target_var {
+                    let unbounded_vars = new_value.unbounded_vars();
+                    if unbounded_vars.contains(parameter.as_str()) {
+                        let renamed_var =
+                            Value::Variable(format!("{}_", parameter));
+                        body.replace(parameter.as_str(), &renamed_var);
+                        *parameter += "_";
+                    }
                     body.replace(target_var, new_value);
                 }
             }
@@ -134,11 +141,28 @@ impl Value {
         unbounded_set
     }
 
-    fn unbounded_vars_at(
-        &self,
-        unbounded_set: &mut HashSet<&str>,
-        bounded_set: &mut HashSet<&str>,
+    fn unbounded_vars_at<'value>(
+        &'value self,
+        unbounded_set: &mut HashSet<&'value str>,
+        bounded_set: &mut HashSet<&'value str>,
     ) {
-        todo!()
+        match self {
+            Value::Variable(variable) => {
+                if !bounded_set.contains(variable.as_str()) {
+                    unbounded_set.insert(variable);
+                }
+            }
+            Value::Application { function, argument } => {
+                function.unbounded_vars_at(unbounded_set, bounded_set);
+                argument.unbounded_vars_at(unbounded_set, bounded_set);
+            }
+            Value::Lambda { parameter, body } => {
+                let was_inserted = bounded_set.insert(parameter);
+                body.unbounded_vars_at(unbounded_set, bounded_set);
+                if was_inserted {
+                    bounded_set.remove(parameter.as_str());
+                }
+            }
+        }
     }
 }
