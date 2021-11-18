@@ -1,6 +1,10 @@
 //! Exporta um valor do cálculo Lambda.
 
+#[cfg(test)]
+mod test;
+
 use std::collections::HashSet;
+use std::mem;
 
 /// `λa. λb. λc. a b c`
 /// <=>
@@ -44,7 +48,7 @@ use std::collections::HashSet;
 ///
 /// reduced = `a (λy. y)`
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Value {
     /// `x  <=>     Variable("x")`
     Variable(String),
@@ -82,7 +86,7 @@ impl Value {
     ///
     /// Solução mais básica? Trocar nome do parâmetro.
     /// ```
-    /// λa. (λb. a b)
+    /// λa. (λa_. a a_)
     /// ```
     pub fn replace(&mut self, target_var: &str, new_value: &Self) {
         let unbounded_vars = new_value.unbounded_vars();
@@ -128,6 +132,10 @@ impl Value {
             Value::Application { function, argument } => {
                 if let Value::Lambda { parameter, body } = function.as_mut() {
                     body.replace(parameter, argument);
+                    *self = mem::replace(
+                        body.as_mut(),
+                        Value::Variable(String::new()),
+                    );
                     true
                 } else {
                     function.reduce_one() || argument.reduce_one()
