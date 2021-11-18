@@ -85,6 +85,16 @@ impl Value {
     /// λa. (λb. a b)
     /// ```
     pub fn replace(&mut self, target_var: &str, new_value: &Self) {
+        let unbounded_vars = new_value.unbounded_vars();
+        self.replace_with(target_var, new_value, &unbounded_vars);
+    }
+
+    fn replace_with(
+        &mut self,
+        target_var: &str,
+        new_value: &Self,
+        unbounded_vars: &HashSet<&str>,
+    ) {
         match self {
             Value::Variable(variable) => {
                 if variable == target_var {
@@ -99,7 +109,6 @@ impl Value {
 
             Value::Lambda { parameter, body } => {
                 if parameter != target_var {
-                    let unbounded_vars = new_value.unbounded_vars();
                     if unbounded_vars.contains(parameter.as_str()) {
                         let renamed_var =
                             Value::Variable(format!("{}_", parameter));
