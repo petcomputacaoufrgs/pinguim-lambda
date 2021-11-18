@@ -6,6 +6,8 @@ mod test;
 use std::collections::HashSet;
 use std::mem;
 
+/// Representação recursiva de um termo Lambda.
+///
 /// `λa. λb. λc. a b c`
 /// <=>
 /// `λa. (λb. (λc. (a b) c))`
@@ -50,15 +52,21 @@ use std::mem;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Value {
+    /// Uma variável.
+    ///
     /// `x  <=>     Variable("x")`
     Variable(String),
 
+    /// Uma aplicação de um argumento em uma função.
+    ///
     /// `f x <=>    Application {
     ///                 function: Variable("f"),
     ///                 argument: Variable("x")
     ///             }`
     Application { function: Box<Value>, argument: Box<Value> },
 
+    /// Uma abstração Lambda com parâmetro e corpo.
+    ///
     /// `λx. y <=>  Lambda {
     ///                 parameter: "x",
     ///                 body: Variable("y"),
@@ -67,7 +75,8 @@ pub enum Value {
 }
 
 impl Value {
-    /// Não lida com a captura de variáveis.
+    /// Substitui todas as ocorrências da variável `target_var` pelo valor `new_value` dentro de `self`.
+    /// Lida com a captura de variáveis.
     ///
     /// # Captura de variáveis.
     ///
@@ -125,6 +134,7 @@ impl Value {
         }
     }
 
+    /// Faz a redução de um único redex, mais externo, mais à esquerda. Retorna se tal redex foi encontrado.
     pub fn reduce_one(&mut self) -> bool {
         match self {
             Value::Variable(_) => false,
@@ -146,10 +156,12 @@ impl Value {
         }
     }
 
+    /// Reduz o termo até a sua forma normal, se existir. Se não existir, entra em loop infinito.
     pub fn reduce(&mut self) {
         while self.reduce_one() {}
     }
 
+    /// Retorna o conjunto das varíaveis não ligadas nesse termo.
     pub fn unbounded_vars(&self) -> HashSet<&str> {
         let mut unbounded_set = HashSet::new();
         let mut bounded_set = HashSet::new();
