@@ -117,6 +117,23 @@ impl Value {
     /// ```
     /// λa. (λa_. a a_)
     /// ```
+    ///
+    /// No entanto, é preciso cuidar o seguinte:
+    /// ```
+    /// λa_. λa. (λx. λa. x a a_) a
+    /// ```
+    /// <=> substituir `x` por `a`
+    /// ```
+    /// λa_. λa. (λa_. a a_ a_) a
+    /// ```
+    ///
+    /// Mas a resposta correta deve ser:
+    /// ```
+    /// λa_. λa. (λa__. a a__ a_) a
+    /// ```
+    ///
+    /// Solução mais básica? Aumentar o nome da variável com `_` até não haver
+    /// variáveis livres.
     pub fn replace(&mut self, target_var: &str, new_value: &Self) {
         let unbounded_vars = new_value.unbounded_vars();
         self.replace_with(target_var, new_value, &unbounded_vars);

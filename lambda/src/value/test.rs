@@ -37,6 +37,62 @@ fn capture() {
 }
 
 #[test]
+fn rename_capture() {
+    // λa_. λa. (λx. λa. x a a_) a
+    let mut input_value = Value::Lambda {
+        parameter: String::from("a_"),
+        body: Box::new(Value::Lambda {
+            parameter: String::from("a"),
+            body: Box::new(Value::Application {
+                function: Box::new(Value::Lambda {
+                    parameter: String::from("x"),
+                    body: Box::new(Value::Lambda {
+                        parameter: String::from("a"),
+                        body: Box::new(Value::Application {
+                            function: Box::new(Value::Application {
+                                function: Box::new(Value::Variable(
+                                    String::from("x"),
+                                )),
+                                argument: Box::new(Value::Variable(
+                                    String::from("a"),
+                                )),
+                            }),
+                            argument: Box::new(Value::Variable(String::from(
+                                "a_",
+                            ))),
+                        }),
+                    }),
+                }),
+                argument: Box::new(Value::Variable(String::from("a"))),
+            }),
+        }),
+    };
+
+    // λa_. λa. (λa__. a a__ a_)
+    let output_value = Value::Lambda {
+        parameter: String::from("a_"),
+        body: Box::new(Value::Lambda {
+            parameter: String::from("a"),
+            body: Box::new(Value::Lambda {
+                parameter: String::from("a__"),
+                body: Box::new(Value::Application {
+                    function: Box::new(Value::Application {
+                        function: Box::new(Value::Variable(String::from("a"))),
+                        argument: Box::new(Value::Variable(String::from(
+                            "a__",
+                        ))),
+                    }),
+                    argument: Box::new(Value::Variable(String::from("a_"))),
+                }),
+            }),
+        }),
+    };
+
+    input_value.reduce();
+    assert_eq!(input_value, output_value);
+}
+
+#[test]
 fn two_power_three() {
     // (λf. λx. f (f (f x))) (λf. λx. f (f x))
     let mut input_value = Value::Application {
