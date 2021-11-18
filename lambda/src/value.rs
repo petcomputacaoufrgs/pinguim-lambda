@@ -75,6 +75,26 @@ pub enum Value {
 }
 
 impl Value {
+    /// Retorna a codificação de church do dado número natural.
+    pub fn church_numeral(number: u64) -> Self {
+        let mut body = Value::Variable(String::from("x"));
+
+        for _ in 0..number {
+            body = Value::Application {
+                function: Box::new(Value::Variable(String::from("f"))),
+                argument: Box::new(body),
+            };
+        }
+
+        Value::Lambda {
+            parameter: String::from("f"),
+            body: Box::new(Value::Lambda {
+                parameter: String::from("x"),
+                body: Box::new(body),
+            }),
+        }
+    }
+
     /// Substitui todas as ocorrências da variável `target_var` pelo valor `new_value` dentro de `self`.
     /// Lida com a captura de variáveis.
     ///
