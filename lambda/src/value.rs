@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod test;
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem;
 
@@ -12,7 +13,7 @@ use std::mem;
 /// <=>
 /// `λa. (λb. (λc. (a b) c))`
 /// <=>
-/// ```
+/// ```ignore
 /// Lambda {
 ///     parameter: "a",
 ///     body: Lambda {
@@ -33,7 +34,7 @@ use std::mem;
 ///
 /// `(λx. a x) (λy. y)`
 /// <=>
-/// ```
+/// ```ignore
 /// Application {
 ///     function: Lambda {
 ///         parameter: "x",
@@ -95,16 +96,80 @@ impl Value {
         }
     }
 
+    pub fn beta_equiv(&self, other: &Value) -> bool {
+        let mut self_indices = ParamIndices::default();
+        let mut other_indices = ParamIndices::default();
+        self.beta_equiv_with(other, &mut self_indices, &mut other_indices)
+    }
+
+    fn beta_equiv_with<'this, 'other>(
+        &'this self,
+        other: &'other Value,
+        self_indices: &mut ParamIndices<'this>,
+        other_indices: &mut ParamIndices<'other>,
+    ) -> bool {
+        match (self, other) {
+            (Value::Variable(self_var), Value::Variable(other_var)) => {
+                match (
+                    self_indices.get(self_var.as_str()),
+                    other_indices.get(other_var.as_str()),
+                ) {
+                    (Some(self_index), Some(other_index)) => {
+                        self_index == other_index
+                    }
+                    (Some(_), None) | (None, Some(_)) => false,
+                    (None, None) => self_var == other_var,
+                }
+            }
+
+            (
+                Value::Application { function: self_func, argument: self_arg },
+                Value::Application {
+                    function: other_func,
+                    argument: other_arg,
+                },
+            ) => {
+                self_func.beta_equiv_with(
+                    other_func,
+                    self_indices,
+                    other_indices,
+                ) && self_arg.beta_equiv_with(
+                    other_arg,
+                    self_indices,
+                    other_indices,
+                )
+            }
+
+            (
+                Value::Lambda { parameter: self_param, body: self_body },
+                Value::Lambda { parameter: other_param, body: other_body },
+            ) => {
+                let self_old_index = self_indices.push(self_param);
+                let other_old_index = other_indices.push(other_param);
+                let body_is_beta_equiv = self_body.beta_equiv_with(
+                    other_body,
+                    self_indices,
+                    other_indices,
+                );
+                self_indices.pop(self_param, self_old_index);
+                other_indices.pop(other_param, other_old_index);
+                body_is_beta_equiv
+            }
+
+            _ => false,
+        }
+    }
+
     /// Substitui todas as ocorrências da variável `target_var` pelo valor `new_value` dentro de `self`.
     /// Lida com a captura de variáveis.
     ///
     /// # Captura de variáveis.
     ///
-    /// ```
+    /// ```ignore
     /// λa. (λx. λa. x a) a
     /// ```
     /// <=> substituir `x` por `a`
-    /// ```
+    /// ```ignore
     /// λa. (λa. a a)
     /// ```
     ///
@@ -114,21 +179,21 @@ impl Value {
     /// interno.
     ///
     /// Solução mais básica? Trocar nome do parâmetro.
-    /// ```
+    /// ```ignore
     /// λa. (λa_. a a_)
     /// ```
     ///
     /// No entanto, é preciso cuidar o seguinte:
-    /// ```
+    /// ```ignore
     /// λa_. λa. (λx. λa. x a a_) a
     /// ```
     /// <=> substituir `x` por `a`
-    /// ```
+    /// ```ignore
     /// λa_. λa. (λa_. a a_ a_) a
     /// ```
     ///
     /// Mas a resposta correta deve ser:
-    /// ```
+    /// ```ignore
     /// λa_. λa. (λa__. a a__ a_) a
     /// ```
     ///
@@ -250,5 +315,36 @@ impl Value {
                 }
             }
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct ParamIndices<'value> {
+    param_map: HashMap<&'value str, u64>,
+    count: u64,
+}
+
+impl<'value> ParamIndices<'value> {
+    #[must_use]
+    pub fn push(&mut self, param: &'value str) -> Option<u64> {
+        let old_index = self.param_map.insert(param, self.count);
+        self.count += 1;
+        old_index
+    }
+
+    pub fn pop(&mut self, param: &'value str, old_index: Option<u64>) {
+        match old_index {
+            Some(index) => {
+                self.param_map.insert(param, index);
+            }
+            None => {
+                self.param_map.remove(param);
+            }
+        }
+        self.count -= 1;
+    }
+
+    pub fn get(&self, param: &'value str) -> Option<u64> {
+        self.param_map.get(param).copied()
     }
 }

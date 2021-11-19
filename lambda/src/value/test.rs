@@ -104,5 +104,5 @@ fn two_power_three() {
     let output_value = Value::church_numeral(8);
 
     input_value.reduce();
-    assert_eq!(input_value, output_value);
+    assert!(input_value.beta_equiv(&output_value));
 }
