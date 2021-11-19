@@ -143,7 +143,7 @@ impl Value {
         &mut self,
         target_var: &str,
         new_value: &Self,
-        unbounded_vars: &HashSet<&str>,
+        new_value_unbounded: &HashSet<&str>,
     ) {
         match self {
             Value::Variable(variable) => {
@@ -153,19 +153,39 @@ impl Value {
             }
 
             Value::Application { function, argument } => {
-                function.replace(target_var, new_value);
-                argument.replace(target_var, new_value);
+                function.replace_with(
+                    target_var,
+                    new_value,
+                    new_value_unbounded,
+                );
+                argument.replace_with(
+                    target_var,
+                    new_value,
+                    new_value_unbounded,
+                );
             }
 
             Value::Lambda { parameter, body } => {
                 if parameter != target_var {
-                    if unbounded_vars.contains(parameter.as_str()) {
-                        let renamed_var =
-                            Value::Variable(format!("{}_", parameter));
-                        body.replace(parameter.as_str(), &renamed_var);
-                        *parameter += "_";
+                    if new_value_unbounded.contains(parameter.as_str()) {
+                        let body_unbounded = body.unbounded_vars();
+                        let mut renamed_var = format!("{}_", parameter);
+                        while new_value_unbounded.contains(renamed_var.as_str())
+                            || body_unbounded.contains(renamed_var.as_str())
+                        {
+                            renamed_var.push('_');
+                        }
+                        body.replace(
+                            parameter.as_str(),
+                            &Value::Variable(renamed_var.clone()),
+                        );
+                        *parameter = renamed_var;
                     }
-                    body.replace(target_var, new_value);
+                    body.replace_with(
+                        target_var,
+                        new_value,
+                        new_value_unbounded,
+                    );
                 }
             }
         }
