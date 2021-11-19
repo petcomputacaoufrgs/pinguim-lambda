@@ -345,6 +345,6 @@ impl<'value> ParamIndices<'value> {
     }
 
     pub fn get(&self, param: &'value str) -> Option<u64> {
-        self.param_map.get(param).copied()
+        self.param_map.get(param).copied().map(|index| self.count - index)
     }
 }
