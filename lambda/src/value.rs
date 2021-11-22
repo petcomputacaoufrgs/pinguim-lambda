@@ -96,12 +96,15 @@ impl Value {
         }
     }
 
+    /// Testa se dois termos são beta-equivalentes.
     pub fn beta_equiv(&self, other: &Value) -> bool {
         let mut self_indices = ParamIndices::default();
         let mut other_indices = ParamIndices::default();
         self.beta_equiv_with(other, &mut self_indices, &mut other_indices)
     }
 
+    /// Detalhe de implementação do teste de equivalência.
+    /// Testa a beta-equivalência recursivamente, usando estruturas auxiliares já inicializadas.
     fn beta_equiv_with<'this, 'other>(
         &'this self,
         other: &'other Value,
@@ -204,6 +207,8 @@ impl Value {
         self.replace_with(target_var, new_value, &unbounded_vars);
     }
 
+    /// Detalhe de implementação da substituição de variáveis.
+    /// Realiza a substituição recursivamente, utilizando estruturas auxiliares já inicializadas.
     fn replace_with(
         &mut self,
         target_var: &str,
@@ -292,6 +297,8 @@ impl Value {
         unbounded_set
     }
 
+    /// Detalhe de implementação da construção do conjunto de variáveis não ligadas.
+    /// Realiza a construção recursivamente, utilizando estruturas auxiliares já inicializadas.
     fn unbounded_vars_at<'value>(
         &'value self,
         unbounded_set: &mut HashSet<&'value str>,
@@ -318,20 +325,33 @@ impl Value {
     }
 }
 
+/// Mapeamento de nomes de parâmetros para indices.
 #[derive(Debug, Clone, Default)]
 struct ParamIndices<'value> {
+    /// Associação entre nomes de parâmetros e indices.
     param_map: HashMap<&'value str, u64>,
-    count: u64,
+    /// Quantidade de parâmetros.
+    param_count: u64,
 }
 
 impl<'value> ParamIndices<'value> {
+    /// Mapeia o nome do parâmetro para o último indice dessa coleção.
+    ///
+    /// O método retorna um possível mapeamento antigo para esse nome de parâmetro.
+    /// Deve-se passar esse antigo mapeamento para o método [`ParamIndices::pop`], ao remover o mapeamento atual.
     #[must_use]
     pub fn push(&mut self, param: &'value str) -> Option<u64> {
-        let old_index = self.param_map.insert(param, self.count);
-        self.count += 1;
+        let old_index = self.param_map.insert(param, self.param_count);
+        self.param_count += 1;
         old_index
     }
 
+    /// Remove o último mapeamento, restaurando um possível mapeamento antigo para esse nome de parâmetro.
+    ///
+    /// O método não checa se o nome de parâmetro passado de fato está no último mapeamento,
+    /// é responsabilidade de quem chama o método passar o parâmetro correto.
+    ///
+    /// O antigo mapeamento deve ser o retornado pelo método [`ParamIndices::push`] que criou um mapeamento sendo removido.
     pub fn pop(&mut self, param: &'value str, old_index: Option<u64>) {
         match old_index {
             Some(index) => {
@@ -341,10 +361,12 @@ impl<'value> ParamIndices<'value> {
                 self.param_map.remove(param);
             }
         }
-        self.count -= 1;
+        self.param_count -= 1;
     }
 
+    /// Obtém o indice mapeado para aquele nome de parâmetro, se estiver mapeado.
+    /// O último parâmetro mapeado terá índice 1, o segundo índice 2, etc...
     pub fn get(&self, param: &'value str) -> Option<u64> {
-        self.param_map.get(param).copied().map(|index| self.count - index)
+        self.param_map.get(param).copied().map(|index| self.param_count - index)
     }
 }
