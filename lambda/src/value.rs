@@ -203,8 +203,8 @@ impl Value {
     /// Solução mais básica? Aumentar o nome da variável com `_` até não haver
     /// variáveis livres.
     pub fn replace(&mut self, target_var: &str, new_value: &Self) {
-        let unbounded_vars = new_value.unbounded_vars();
-        self.replace_with(target_var, new_value, &unbounded_vars);
+        let unbound_vars = new_value.unbound_vars();
+        self.replace_with(target_var, new_value, &unbound_vars);
     }
 
     /// Detalhe de implementação da substituição de variáveis.
@@ -213,7 +213,7 @@ impl Value {
         &mut self,
         target_var: &str,
         new_value: &Self,
-        new_value_unbounded: &HashSet<&str>,
+        new_value_unbound: &HashSet<&str>,
     ) {
         match self {
             Value::Variable(variable) => {
@@ -223,25 +223,17 @@ impl Value {
             }
 
             Value::Application { function, argument } => {
-                function.replace_with(
-                    target_var,
-                    new_value,
-                    new_value_unbounded,
-                );
-                argument.replace_with(
-                    target_var,
-                    new_value,
-                    new_value_unbounded,
-                );
+                function.replace_with(target_var, new_value, new_value_unbound);
+                argument.replace_with(target_var, new_value, new_value_unbound);
             }
 
             Value::Lambda { parameter, body } => {
                 if parameter != target_var {
-                    if new_value_unbounded.contains(parameter.as_str()) {
-                        let body_unbounded = body.unbounded_vars();
+                    if new_value_unbound.contains(parameter.as_str()) {
+                        let body_unbound = body.unbound_vars();
                         let mut renamed_var = format!("{}_", parameter);
-                        while new_value_unbounded.contains(renamed_var.as_str())
-                            || body_unbounded.contains(renamed_var.as_str())
+                        while new_value_unbound.contains(renamed_var.as_str())
+                            || body_unbound.contains(renamed_var.as_str())
                         {
                             renamed_var.push('_');
                         }
@@ -251,11 +243,7 @@ impl Value {
                         );
                         *parameter = renamed_var;
                     }
-                    body.replace_with(
-                        target_var,
-                        new_value,
-                        new_value_unbounded,
-                    );
+                    body.replace_with(target_var, new_value, new_value_unbound);
                 }
             }
         }
@@ -289,36 +277,36 @@ impl Value {
     }
 
     /// Retorna o conjunto das varíaveis não ligadas nesse termo.
-    pub fn unbounded_vars(&self) -> HashSet<&str> {
-        let mut unbounded_set = HashSet::new();
-        let mut bounded_set = HashSet::new();
+    pub fn unbound_vars(&self) -> HashSet<&str> {
+        let mut unbound_set = HashSet::new();
+        let mut bound_set = HashSet::new();
 
-        self.unbounded_vars_at(&mut unbounded_set, &mut bounded_set);
-        unbounded_set
+        self.unbound_vars_at(&mut unbound_set, &mut bound_set);
+        unbound_set
     }
 
     /// Detalhe de implementação da construção do conjunto de variáveis não ligadas.
     /// Realiza a construção recursivamente, utilizando estruturas auxiliares já inicializadas.
-    fn unbounded_vars_at<'value>(
+    fn unbound_vars_at<'value>(
         &'value self,
-        unbounded_set: &mut HashSet<&'value str>,
-        bounded_set: &mut HashSet<&'value str>,
+        unbound_set: &mut HashSet<&'value str>,
+        bound_set: &mut HashSet<&'value str>,
     ) {
         match self {
             Value::Variable(variable) => {
-                if !bounded_set.contains(variable.as_str()) {
-                    unbounded_set.insert(variable);
+                if !bound_set.contains(variable.as_str()) {
+                    unbound_set.insert(variable);
                 }
             }
             Value::Application { function, argument } => {
-                function.unbounded_vars_at(unbounded_set, bounded_set);
-                argument.unbounded_vars_at(unbounded_set, bounded_set);
+                function.unbound_vars_at(unbound_set, bound_set);
+                argument.unbound_vars_at(unbound_set, bound_set);
             }
             Value::Lambda { parameter, body } => {
-                let was_inserted = bounded_set.insert(parameter);
-                body.unbounded_vars_at(unbounded_set, bounded_set);
+                let was_inserted = bound_set.insert(parameter);
+                body.unbound_vars_at(unbound_set, bound_set);
                 if was_inserted {
-                    bounded_set.remove(parameter.as_str());
+                    bound_set.remove(parameter.as_str());
                 }
             }
         }
