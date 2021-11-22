@@ -271,11 +271,6 @@ impl Value {
         }
     }
 
-    /// Reduz o termo até a sua forma normal, se existir. Se não existir, entra em loop infinito.
-    pub fn reduce(&mut self) {
-        while self.reduce_one() {}
-    }
-
     /// Retorna o conjunto das varíaveis não ligadas nesse termo.
     pub fn unbound_vars(&self) -> HashSet<&str> {
         let mut unbound_set = HashSet::new();
