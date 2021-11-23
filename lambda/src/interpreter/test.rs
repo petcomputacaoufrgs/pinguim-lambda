@@ -1,4 +1,5 @@
 use super::run_once;
+use super::Interpreter;
 use crate::value::Value;
 
 #[test]
@@ -102,4 +103,42 @@ fn two_power_three() {
     // λf. λx. f (f (f (f (f (f (f (f x)))))))
     let output_value = Value::church_numeral(8);
     assert!(run_once(input_value).beta_equiv(&output_value));
+}
+
+#[test]
+fn steps() {
+    // (λx. x x x) (λy. y) (λz. z)
+    let input_value = Value::Application {
+        function: Box::new(Value::Application {
+            function: Box::new(Value::Lambda {
+                parameter: String::from("x"),
+                body: Box::new(Value::Application {
+                    function: Box::new(Value::Application {
+                        function: Box::new(Value::Variable(String::from("x"))),
+                        argument: Box::new(Value::Variable(String::from("x"))),
+                    }),
+                    argument: Box::new(Value::Variable(String::from("x"))),
+                }),
+            }),
+            argument: Box::new(Value::Lambda {
+                parameter: String::from("y"),
+                body: Box::new(Value::Variable(String::from("y"))),
+            }),
+        }),
+        argument: Box::new(Value::Lambda {
+            parameter: String::from("z"),
+            body: Box::new(Value::Variable(String::from("z"))),
+        }),
+    };
+
+    // (λz. z)
+    let output_value = Value::Lambda {
+        parameter: String::from("z"),
+        body: Box::new(Value::Variable(String::from("z"))),
+    };
+
+    let mut interpreter = Interpreter::new(input_value);
+    interpreter.run_all();
+    assert!(interpreter.output().beta_equiv(&output_value));
+    assert_eq!(interpreter.steps(), 4);
 }
