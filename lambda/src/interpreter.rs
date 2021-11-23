@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod test;
+
 use crate::value::Value;
 
 /// Reduz o termo até a sua forma normal, se existir. Se não existir, entra em loop infinito.
