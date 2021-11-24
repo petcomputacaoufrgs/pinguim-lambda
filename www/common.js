@@ -1,6 +1,71 @@
 import * as styles from './styles.css';
 import * as commonStyles from './common_styles.css';
 
+const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+function switchTheme(e) {
+    if (e.target.checked) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    else {
+        document.documentElement.setAttribute('data-theme', 'light');
+    }    
+}
+toggleSwitch.addEventListener('change', switchTheme, false);
+
+const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+if (currentTheme) {
+    document.documentElement.setAttribute('data-theme', currentTheme);
+
+    if (currentTheme === 'dark') {
+        toggleSwitch.checked = true;
+    }
+}
+
+const actualBtn = document.getElementById('upload_button');
+const fileChosen = document.getElementById('file-chosen');
+actualBtn.addEventListener('change', function(){
+    fileChosen.textContent = this.files[0].name
+});
+
+export const init = (() => {
+    let handlers = [];
+
+    function callAllHandlers() {
+        const oldHandlers = handlers;
+        handlers = [];
+        for (const handler of oldHandlers) {
+            handler();
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        callAllHandlers();
+    });
+
+    return (handler) => {
+        handlers.push(handler);
+
+        if (document.readyState == 'complete') {
+            callAllHandlers();
+        }
+    };
+})();
+
+// Código para verificar se o wasm é suportado]
+// Retirado de https://www.syncfusion.com/faq/how-can-i-check-if-a-browser-supports-webassembly
+const supported = (() => {
+    try {
+        if (typeof WebAssembly === "object"
+            && typeof WebAssembly.instantiate === "function")
+        {
+            const module = new WebAssembly.Module(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
+            if (module instanceof WebAssembly.Module)
+                return new WebAssembly.Instance(module) instanceof WebAssembly.Instance;
+        }
+    } catch (e) { }
+    return false;
+})();
+
 export function throwNonLambda() {
     throw 'Expected a variable, application or lambda'
 }
@@ -56,14 +121,10 @@ export function stringifyTerm(term) {
 }
 
 function createSvgElem(name) {
-    return Document.createElementNs('http://www.w3.org/2000/svg', name)
+    return document.createElementNS('http://www.w3.org/2000/svg', name)
 }
 
 export function initSvgRoot(targetSvg) {
-}
-
-export function clearSvg(targetSvg) {
-    targetSvg.replaceChildren();
 }
 
 export function defaultDrawConfig() {
@@ -82,9 +143,14 @@ export function defaultDrawConfig() {
     };
 };
 
+export function clearSvg(targetSvg, config) {
+    targetSvg.replaceChildren();
+}
+
 export function drawTerm(term, targetSvg, config) {
-    clearSvg(targetSvg);
-    drawTermWith(term, targetSvg, Object.assign(defaultDrawConfig(), config));
+    let actualConfig = Object.assign(defaultDrawConfig(), config);
+    clearSvg(targetSvg, actualConfig);
+    drawTermWith(term, targetSvg, actualConfig);
 }
 
 function cloneObj(obj) {
@@ -128,14 +194,14 @@ function drawNode(config, contentNode) {
     return outerGNode;
 }
 
-function drawLine(config, dx, dy) {
+function drawLine(config, dx) {
     let lineNode = createSvgElem('line');
     lineNode.setAttribute('x1', 0);
-    lineNode.setAttribute('y1', 0);
+    lineNode.setAttribute('y1', config.textPaddingTop);
     lineNode.setAttribute('x2', dx);
-    lineNode.setAttribute('y2', dy);
-    lineNode.setAttribute('stroke-width', subConfig.lineWidth);
-    lineNode.setAttribute('stroke', subConfig.lineColor);
+    lineNode.setAttribute('y2', config.levelDistance);
+    lineNode.setAttribute('stroke-width', config.lineWidth);
+    lineNode.setAttribute('stroke', config.lineColor);
     let gNode = createSvgElem('g');
     gNode.appendChild(lineNode);
     gNode.setAttribute(
@@ -157,7 +223,7 @@ function drawTermWith(term, parent, config) {
             'translate(0,' + config.textPaddingTop + ')'
         );
         varNode.textContent = term.varname;
-        varNode.className = 'lambda-drawing lambda-drawing-text';
+        varNode.setAttribute('class', 'lambda-drawing lambda-drawing-var');
         parent.appendChild(drawNode(config, varNode));
         return 1;
     }
@@ -182,8 +248,8 @@ function drawTermWith(term, parent, config) {
             'transform',
             'translate(0,' + nodeConfig.appPaddingTop + ')'
         );
-        appNode.appContent = '@';
-        appNode.className = 'lambda-drawing lambda-drawing-app';
+        appNode.textContent = '@';
+        appNode.setAttribute('class', 'lambda-drawing lambda-drawing-app');
         parent.appendChild(drawNode(nodeConfig, appNode));
 
         let lineConfig = nodeConfig;
@@ -191,13 +257,13 @@ function drawTermWith(term, parent, config) {
 
         parent.appendChild(drawLine(
             config,
-            Math.trunc(-subConfig.leafDistance * (rightLeafs + leftLeafs) / 4)
+            Math.trunc(-subConfig.leafDistance * (rightLeafs + leftLeafs) / 4),
             lineConfig
         ));
 
         parent.appendChild(drawLine(
             config,
-            Math.trunc(subConfig.leafDistance * (rightLeafs + leftLeafs) / 4)
+            Math.trunc(subConfig.leafDistance * (rightLeafs + leftLeafs) / 4),
             lineConfig
         ));
 
@@ -211,7 +277,7 @@ function drawTermWith(term, parent, config) {
 
         let nodeConfig = cloneObj(config);
         nodeConfig.left += Math.trunc(
-            (leftLeafs + 1) * config.leafDistance / 2
+            leafs * config.leafDistance / 2
         );
         let lambdaNode = createSvgElem('text');
         lambdaNode.setAttribute('fill', nodeConfig.lambdalicationColor);
@@ -220,8 +286,8 @@ function drawTermWith(term, parent, config) {
             'transform',
             'translate(0,' + nodeConfig.lambdaPaddingTop + ')'
         );
-        lambdaNode.lambdaContent = 'λ' + term.parameter;
-        lambdaNode.className = 'lambda-drawing lambda-drawing-lambda';
+        lambdaNode.textContent = 'λ' + term.parameter;
+        lambdaNode.setAttribute('class', 'lambda-drawing lambda-drawing-lambda');
         parent.appendChild(drawNode(nodeConfig, lambdaNode));
 
         let lineConfig = nodeConfig;

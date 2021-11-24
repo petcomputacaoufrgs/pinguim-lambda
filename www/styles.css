@@ -7,6 +7,10 @@
     width: 30vw;
 }
 
+#tree {
+    background-color: white;
+}
+
 
 /* CODING AREA */
 .coding-area {
