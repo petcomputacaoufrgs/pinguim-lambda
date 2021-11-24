@@ -172,7 +172,7 @@ function drawTermWith(term, parent, config) {
 
         let nodeConfig = cloneObj(config);
         nodeConfig.left += Math.trunc(
-            (leftLeafs + 1) * config.leafDistance / 2
+            (leftLeafs + rightLeafs) * config.leafDistance / 2
         );
 
         let appNode = createSvgElem('text');
