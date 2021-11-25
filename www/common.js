@@ -55,8 +55,8 @@ export const init = (() => {
 // Retirado de https://www.syncfusion.com/faq/how-can-i-check-if-a-browser-supports-webassembly
 const supported = (() => {
     try {
-        if (typeof WebAssembly === "object"
-            && typeof WebAssembly.instantiate === "function")
+        if (typeof WebAssembly === 'object'
+            && typeof WebAssembly.instantiate === 'function')
         {
             const module = new WebAssembly.Module(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
             if (module instanceof WebAssembly.Module)
@@ -125,24 +125,81 @@ function createSvgElem(name) {
 }
 
 export function initSvgRoot(targetSvg) {
-    targetSvg.addEventListener("touchstart", dragStart, false);
-    targetSvg.addEventListener("touchend", dragEnd, false);
-    targetSvg.addEventListener("touchmove", drag, false);
+    document.body.addEventListener('touchstart', dragStart, false);
+    document.body.addEventListener('touchend', dragEnd, false);
+    document.body.addEventListener('touchmove', drag, false);
 
-    targetSvg.addEventListener("mousedown", dragStart, false);
-    targetSvg.addEventListener("mouseup", dragEnd, false);
-    targetSvg.addEventListener("mousemove", drag, false);
+    document.body.addEventListener('mousedown', dragStart, false);
+    document.body.addEventListener('mouseup', dragEnd, false);
+    document.body.addEventListener('mousemove', drag, false);
 
-    function dragStart() {
+    targetSvg.setAttribute(
+        'width',
+        targetSvg.width.baseVal.value
+    );
+    targetSvg.setAttribute(
+        'height',
+        targetSvg.height.baseVal.value
+    );
 
+    let current = { x: 0, y: 0 };
+    let dragging = false;
+
+    function move(offset) {
+        let attribute = targetSvg.getAttribute('viewBox');
+        let pieces;
+        if (attribute == null || attribute == undefined) {
+            pieces = [
+                0,
+                0,
+                targetSvg.width.baseVal.value,
+                targetSvg.height.baseVal.value,
+            ];
+        } else {
+            pieces = attribute.split(' ').map(str => parseInt(str.trim()));
+        }
+        pieces[0] -= offset.x;
+        pieces[1] -= offset.y;
+        targetSvg.setAttribute('viewBox', pieces.join(' '));
     }
 
-    function dragEnd() {
+    function dragStart(evt) {
+        if (evt.target == targetSvg) {
+            
+            if (evt.type == 'touchstart') {
+                current.x = evt.touches[0].clientX;
+                current.y = evt.touches[0].clientY;
+            } else {
+                current.x = evt.clientX;
+                current.y = evt.clientY;
+            }
 
+            dragging = true;
+        }
     }
 
-    function drag() {
+    function dragEnd(evt) {
+        dragging = false;
+    }
 
+    function drag(evt) {
+        if (dragging) {
+            evt.preventDefault();
+
+            let offset = { x: 0, y: 0 };
+
+            if (evt.type == 'touchstart') {
+                offset.x = evt.touches[0].clientX - current.x;
+                offset.y = evt.touches[0].clientY - current.y;
+            } else {
+                offset.x = evt.clientX - current.x;
+                offset.y = evt.clientY - current.y;
+            }
+
+            move(offset);
+            current.x += offset.x;
+            current.y += offset.y;
+        }
     }
 }
 
@@ -157,7 +214,7 @@ export function defaultDrawConfig() {
         varColor: '#000000',
         lineColor: '#0000ff',
         lineWidth: 2,
-        appColor: '#ffa000',
+        appColor: '#ff5000',
         lambdaColor: '#00a000',
         levelDistance: 50,
         leafDistance: 20,
