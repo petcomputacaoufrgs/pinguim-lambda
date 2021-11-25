@@ -125,19 +125,40 @@ function createSvgElem(name) {
 }
 
 export function initSvgRoot(targetSvg) {
+    targetSvg.addEventListener("touchstart", dragStart, false);
+    targetSvg.addEventListener("touchend", dragEnd, false);
+    targetSvg.addEventListener("touchmove", drag, false);
+
+    targetSvg.addEventListener("mousedown", dragStart, false);
+    targetSvg.addEventListener("mouseup", dragEnd, false);
+    targetSvg.addEventListener("mousemove", drag, false);
+
+    function dragStart() {
+
+    }
+
+    function dragEnd() {
+
+    }
+
+    function drag() {
+
+    }
 }
+
 
 export function defaultDrawConfig() {
     return {
         left: 40,
         top: 40,
         nodeRadius: 14,
-        textPaddingTop: 5,
+        textTopBottom: 5,
         backgroundColor: '#ffffff',
-        textColor: '#000000',
+        varColor: '#000000',
         lineColor: '#0000ff',
         lineWidth: 2,
-        applicationColor: '#ff8000',
+        appColor: '#ffa000',
+        lambdaColor: '#00a000',
         levelDistance: 50,
         leafDistance: 20,
     };
@@ -197,7 +218,7 @@ function drawNode(config, contentNode) {
 function drawLine(config, dx) {
     let lineNode = createSvgElem('line');
     lineNode.setAttribute('x1', 0);
-    lineNode.setAttribute('y1', config.textPaddingTop);
+    lineNode.setAttribute('y1', 0);
     lineNode.setAttribute('x2', dx);
     lineNode.setAttribute('y2', config.levelDistance);
     lineNode.setAttribute('stroke-width', config.lineWidth);
@@ -216,11 +237,11 @@ function drawTermWith(term, parent, config) {
         let gNode = createSvgElem('g');
         gNode.appendChild(drawBgCircle(config));
         let varNode = createSvgElem('text');
-        varNode.setAttribute('fill', config.textColor);
+        varNode.setAttribute('fill', config.varColor);
         varNode.setAttribute('text-anchor', 'middle');
         varNode.setAttribute(
             'transform',
-            'translate(0,' + config.textPaddingTop + ')'
+            'translate(0,' + config.textTopBottom + ')'
         );
         varNode.textContent = term.varname;
         varNode.setAttribute('class', 'lambda-drawing lambda-drawing-var');
@@ -229,11 +250,11 @@ function drawTermWith(term, parent, config) {
     }
 
     if (isApplication(term)) {
-        let subTop = config.top + levelHeight(config);
-        let subConfig = mergeObj(config, { top: subTop });
+        let subConfig = cloneObj(config);
+        subConfig.top += levelHeight(config);
         let leftLeafs = drawTermWith(term.function, parent, subConfig);
 
-        subconfig.left += subconfig.leafDistance * (leftLeafs + 1);
+        subConfig.left += subConfig.leafDistance * (leftLeafs + 1);
         let rightLeafs = drawTermWith(term.argument, parent, subConfig);
 
         let nodeConfig = cloneObj(config);
@@ -242,29 +263,27 @@ function drawTermWith(term, parent, config) {
         );
 
         let appNode = createSvgElem('text');
-        appNode.setAttribute('fill', nodeConfig.applicationColor);
+        appNode.setAttribute('fill', nodeConfig.appColor);
         appNode.setAttribute('text-anchor', 'middle');
         appNode.setAttribute(
             'transform',
-            'translate(0,' + nodeConfig.appPaddingTop + ')'
+            'translate(0,' + nodeConfig.textTopBottom + ')'
         );
         appNode.textContent = '@';
         appNode.setAttribute('class', 'lambda-drawing lambda-drawing-app');
         parent.appendChild(drawNode(nodeConfig, appNode));
 
         let lineConfig = nodeConfig;
-        lineConfig.top += nodeHeight(config);
+        lineConfig.top += nodeHeight(config) / 2;
 
         parent.appendChild(drawLine(
-            config,
-            Math.trunc(-subConfig.leafDistance * (rightLeafs + leftLeafs) / 4),
-            lineConfig
+            lineConfig,
+            Math.trunc(-subConfig.leafDistance * (rightLeafs + leftLeafs) / 2)
         ));
 
         parent.appendChild(drawLine(
-            config,
-            Math.trunc(subConfig.leafDistance * (rightLeafs + leftLeafs) / 4),
-            lineConfig
+            lineConfig,
+            Math.trunc(subConfig.leafDistance * (rightLeafs + leftLeafs) / 2)
         ));
 
         return leftLeafs + rightLeafs;
@@ -276,25 +295,25 @@ function drawTermWith(term, parent, config) {
         let leafs = drawTermWith(term.body, parent, subConfig);
 
         let nodeConfig = cloneObj(config);
-        nodeConfig.left += Math.trunc(
-            leafs * config.leafDistance / 2
-        );
+        nodeConfig.left += Math.trunc(leafs/2) * config.leafDistance;
         let lambdaNode = createSvgElem('text');
-        lambdaNode.setAttribute('fill', nodeConfig.lambdalicationColor);
+        lambdaNode.setAttribute('fill', nodeConfig.lambdaColor);
         lambdaNode.setAttribute('text-anchor', 'middle');
         lambdaNode.setAttribute(
             'transform',
-            'translate(0,' + nodeConfig.lambdaPaddingTop + ')'
+            'translate(0,' + nodeConfig.textTopBottom + ')'
         );
         lambdaNode.textContent = 'λ' + term.parameter;
         lambdaNode.setAttribute('class', 'lambda-drawing lambda-drawing-lambda');
         parent.appendChild(drawNode(nodeConfig, lambdaNode));
 
         let lineConfig = nodeConfig;
-        lineConfig.top += nodeHeight(config);
+        lineConfig.top += nodeHeight(config) / 2;
 
-        parent.appendChild(drawLine(config, 0, lineConfig));
+        parent.appendChild(drawLine(lineConfig, 0));
 
         return leafs;
     }
+
+    throwNonLambda();
 }
