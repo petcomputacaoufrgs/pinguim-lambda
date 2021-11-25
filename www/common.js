@@ -132,18 +132,26 @@ export function initSvgRoot(targetSvg) {
     document.body.addEventListener('mousedown', dragStart, false);
     document.body.addEventListener('mouseup', dragEnd, false);
     document.body.addEventListener('mousemove', drag, false);
-
-    targetSvg.setAttribute(
-        'width',
-        targetSvg.width.baseVal.value
-    );
-    targetSvg.setAttribute(
-        'height',
-        targetSvg.height.baseVal.value
-    );
+    targetSvg.addEventListener('resize', resize, false);
 
     let current = { x: 0, y: 0 };
     let dragging = false;
+
+    resize();
+
+    function resize() {
+        targetSvg.removeAttribute('width');
+        targetSvg.removeAttribute('height');
+
+        targetSvg.setAttribute(
+            'width',
+            targetSvg.width.baseVal.value
+        );
+        targetSvg.setAttribute(
+            'height',
+            targetSvg.height.baseVal.value
+        );
+    }
 
     function move(offset) {
         let attribute = targetSvg.getAttribute('viewBox');
@@ -165,7 +173,6 @@ export function initSvgRoot(targetSvg) {
 
     function dragStart(evt) {
         if (evt.target == targetSvg) {
-            
             if (evt.type == 'touchstart') {
                 current.x = evt.touches[0].clientX;
                 current.y = evt.touches[0].clientY;
@@ -214,10 +221,13 @@ export function defaultDrawConfig() {
         varColor: '#000000',
         lineColor: '#0000ff',
         lineWidth: 2,
-        appColor: '#ff5000',
+        appColor: '#ff6000',
+        redexAppColor: '#ff0000',
+        redexBgColor: '#e0e0ff',
         lambdaColor: '#00a000',
         levelDistance: 50,
         leafDistance: 20,
+        onclick: term => console.log(term),
     };
 };
 
@@ -257,9 +267,20 @@ function drawBgCircle(config) {
     return circleNode;
 }
 
-function drawNode(config, contentNode) {
+function drawRedexCircle(term, config) {
+    let circleNode = createSvgElem('circle');
+    circleNode.setAttribute('r', config.nodeRadius);
+    circleNode.setAttribute('stroke', config.redexBgColor);
+    circleNode.setAttribute('fill', config.redexBgColor);
+    circleNode.setAttribute('cx', 0);
+    circleNode.setAttribute('cy', 0);
+    circleNode.addEventListener('click', () => config.onclick(term));
+    return circleNode;
+}
+
+function drawNode(circle, config, contentNode) {
     let gNode = createSvgElem('g');
-    gNode.appendChild(drawBgCircle(config));
+    gNode.appendChild(circle);
     gNode.appendChild(contentNode);
 
     let outerGNode = createSvgElem('g');
@@ -302,7 +323,7 @@ function drawTermWith(term, parent, config) {
         );
         varNode.textContent = term.varname;
         varNode.setAttribute('class', 'lambda-drawing lambda-drawing-var');
-        parent.appendChild(drawNode(config, varNode));
+        parent.appendChild(drawNode(drawBgCircle(config), config, varNode));
         return 1;
     }
 
@@ -320,7 +341,15 @@ function drawTermWith(term, parent, config) {
         );
 
         let appNode = createSvgElem('text');
-        appNode.setAttribute('fill', nodeConfig.appColor);
+        let circle;
+        if (isLambda(term.function)) {
+            appNode.setAttribute('fill', nodeConfig.redexAppColor);
+            circle = drawRedexCircle(term, config);
+            appNode.addEventListener('click', () => config.onclick(term));
+        } else {
+            appNode.setAttribute('fill', nodeConfig.appColor);
+            circle = drawBgCircle(config);
+        }
         appNode.setAttribute('text-anchor', 'middle');
         appNode.setAttribute(
             'transform',
@@ -328,7 +357,7 @@ function drawTermWith(term, parent, config) {
         );
         appNode.textContent = '@';
         appNode.setAttribute('class', 'lambda-drawing lambda-drawing-app');
-        parent.appendChild(drawNode(nodeConfig, appNode));
+        parent.appendChild(drawNode(circle, nodeConfig, appNode));
 
         let lineConfig = nodeConfig;
         lineConfig.top += nodeHeight(config) / 2;
@@ -362,7 +391,9 @@ function drawTermWith(term, parent, config) {
         );
         lambdaNode.textContent = 'λ' + term.parameter;
         lambdaNode.setAttribute('class', 'lambda-drawing lambda-drawing-lambda');
-        parent.appendChild(drawNode(nodeConfig, lambdaNode));
+        parent.appendChild(
+            drawNode(drawBgCircle(nodeConfig), nodeConfig, lambdaNode)
+        );
 
         let lineConfig = nodeConfig;
         lineConfig.top += nodeHeight(config) / 2;

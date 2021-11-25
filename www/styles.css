@@ -43,6 +43,9 @@
     margin: 0;
 }
 
+#tree-wrapper, #tree {
+    height: 100%;
+}
 
 /* ======> SETTINGS FOR CELLPHONES <====== */
 @media screen and (max-device-width:800px) {
