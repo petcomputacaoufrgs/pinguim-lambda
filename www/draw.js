@@ -176,6 +176,8 @@ function drawLambda(term, targetSvg, config) {
     targetSvg.appendChild(wrapper);
 
     let position = newConfig.symmetricPos(svgWidth(bgNode, targetSvg));
+    position.left = Math.min(position.left, childPos.left);
+    position.right = Math.max(position.right, childPos.right);
 
     let line = createLine(
         position.center,
