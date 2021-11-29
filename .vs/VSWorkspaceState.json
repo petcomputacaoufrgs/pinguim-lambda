@@ -1,0 +1,11 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\lambda",
+    "\\lambda-wasm",
+    "\\lambda\\src",
+    "\\lambda\\tests"
+  ],
+  "SelectedNode": "\\lambda\\src\\compiler.rs",
+  "PreviewInSolutionExplorer": false
+}

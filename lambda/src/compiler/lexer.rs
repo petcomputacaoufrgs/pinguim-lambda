@@ -50,8 +50,34 @@ impl<'src> Lexer<'src> {
         self.skip_discardable();
 
         self.clear_current();
+        /*
+        Implementar os condificionais do If:
+            - verificar se o token atual é identificador(Número/Let/In/String)
+            - verificar se o token atual é pontuação(Equal/Dot/OpenPare/CloseParen)
+            - verificar se o token atual é lambda
+            - _ => Error
+        */
+        if self.is_identifier() {
+            todo!()
+        } else if let Some(typ) = self.match_punctuation() {
+            Ok(self.tokenize_punct(typ))
+        } else if self.is_lambda() {
+            todo!()
+        } else {
+            todo!()
+        }
+    }
 
-        todo!()
+    fn next_char(&mut self) {
+        if let Some(character) = self.source.next() {
+            self.token_span.update(character);
+            self.token_content.push(character);
+        }
+    }
+
+    fn clear_current(&mut self) {
+        self.token_content.clear();
+        self.token_span.finish();
     }
 
     fn skip_discardable(&mut self) {
@@ -85,6 +111,38 @@ impl<'src> Lexer<'src> {
         }
     }
 
+    //(Número/Let/In/String)
+    fn tokenize_ident(&mut self) -> Token {
+        let mut only_number = true;
+        while self.is_identifier() {
+            only_number = only_number && self.is_number();
+            self.next_char();
+        }
+        
+        let token_type = if only_number {
+            TokenType::Number
+        } else if let Some(keyword) = self.match_keyword() {
+            keyword
+        } else {
+            todo!()
+        };
+        
+        //self.make_token(token_type)
+    }
+
+    fn tokenize_punct(&mut self, token_type: TokenType) -> Token {
+        self.next_char();
+        self.make_token(token_type)
+    }
+
+    fn make_token(&mut self, token_type: TokenType) -> Token {
+        Token {
+            token_type,
+            content: self.token_content.clone(),
+            span: self.token_span,
+        }
+    }
+
     fn is_whitespace(&mut self) -> bool {
         match self.source.peek() {
             Some(&character) => character.is_whitespace(),
@@ -103,6 +161,35 @@ impl<'src> Lexer<'src> {
         match self.source.peek() {
             Some(&character) => character == '\n',
             None => true,
+        }
+    }
+
+    fn is_identifier(&mut self) -> bool {
+        match self.source.peek() {
+            Some('_') => true,
+            Some(&character) => character.is_ascii_alphanumeric(),
+            None => false,
+        }
+    }
+
+    fn match_keyword(&self) ->  Option<TokenType> {
+        match self.token_content.as_str() {
+            "let" => Some(TokenType::Let),
+            "in" => Some(TokenType::In),
+            _ => None,
+        }
+    }
+
+    fn match_punctuation(&mut self) -> Option<TokenType> {
+        match self.source.peek() {
+            Some(&character) => match character {
+                '=' => Some(TokenType::Equal),
+                '.' => Some(TokenType::Dot),
+                '(' => Some(TokenType::OpenParen),
+                ')' => Some(TokenType::CloseParen),
+                _ => None,
+            }
+            _ => None,
         }
     }
 
