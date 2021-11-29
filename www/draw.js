@@ -99,7 +99,13 @@ export function clearSvg(targetSvg, config) {
     targetSvg.replaceChildren();
 }
 
-export function drawTerm(term, targetSvg, config) {
+export function drawTerm(term, targetSvg, configChanges) {
+    drawTermWith(term, targetSvg, new Config(configChanges));
+}
+
+function drawTermWith(term, targetSvg, config) {
+    console.log(config);
+
     if (isVariable(term)) {
         return drawVariable(term, targetSvg, config);
     }
@@ -115,8 +121,11 @@ export function drawTerm(term, targetSvg, config) {
     throwNonLambda();
 }
 
-function svgWidth(node) {
-    return node.width.baseVal.value;
+function svgWidth(node, targetSvg) {
+    targetSvg.appendChild(node);
+    let width = node.getBBox().width;
+    targetSvg.removeChild(node);
+    return width;
 }
 
 function drawVariable(term, targetSvg, config) {
@@ -125,9 +134,120 @@ function drawVariable(term, targetSvg, config) {
         'lambda-drawing-variable',
         config.variable.node
     );
-    let bgNode = createBg(textNode, config.variable.node);
-    let wrapper = createNodeWrapper(textNode, bgNode, config);
-    return config.symmetricPos(svgWidth(bgNode));
+    let bgNode = createBg(textNode, targetSvg, config.variable.node);
+    let wrapper = createNodeWrapper(textNode, bgNode, targetSvg, config);
+    targetSvg.appendChild(wrapper);
+    return config.symmetricPos(svgWidth(bgNode, targetSvg));
+}
+
+function drawLambda(term, targetSvg, config) {
+    let textNode = createText(
+        'λ' + term.parameter,
+        'lambda-drawing-lambda',
+        config.lambda.node
+    );
+
+    let bgNode = createBg(textNode, targetSvg, config.lambda.node);
+    let childConfig = config.clone();
+    
+    childConfig.setMinCenter(
+        config.symmetricCenter(svgWidth(bgNode, targetSvg))
+    );
+    childConfig.top += config.lambda.line.height + config.lambda.node.height;
+    let childPos = drawTermWith(term.body, targetSvg, childConfig);
+
+    let newConfig = config.clone();
+    newConfig.minCenter = childPos.center;
+    newConfig.left = childPos.left;
+    let wrapper = createNodeWrapper(textNode, bgNode, targetSvg, newConfig);
+    targetSvg.appendChild(wrapper);
+
+    let position = config.symmetricPos(svgWidth(bgNode, targetSvg));
+
+    let line = createLine(
+        position.center,
+        newConfig.top + config.lambda.node.radius,
+        0,
+        newConfig.lambda.line,
+    );
+    targetSvg.appendChild(line);
+
+    return position;
+}
+
+function drawApplication(term, targetSvg, config) {
+    let isRedex = isLambda(term.function);
+    let configName, nodeClass;
+
+    if (isRedex) {
+        configName = 'redexApp';
+        nodeClass = 'lambda-drawing-redex-app';
+    } else {
+        configName = 'nonRedexApp';
+        nodeClass = 'lambda-drawing-non-redex-app';
+    }
+
+    let textNode = createText(
+        '@',
+        'lambda-drawing-lambda ' + nodeClass,
+        config[configName].node
+    );
+
+    let bgNode = createBg(textNode, targetSvg, config[configName].node);
+    let leftChildConfig = config.clone();
+    leftChildConfig.setMinCenter(
+        config.symmetricCenter(svgWidth(bgNode, targetSvg))
+        - Math.ceil(config.minLeafDistance / 2)
+    );
+    leftChildConfig.top += (
+        config[configName].line.height
+        + config[configName].node.height
+    );
+    let leftChildPos = drawTermWith(term.function, targetSvg, leftChildConfig);
+
+    let rightChildConfig = config.clone();
+    rightChildConfig.left = (
+        leftChildPos.right + config.minLeafDistance
+    );
+    rightChildConfig.setMinCenter(rightChildConfig.left);
+    rightChildConfig.top += (
+        config[configName].line.height
+        + config[configName].node.height
+    );
+    let rightChildPos = drawTermWith(
+        term.argument,
+        targetSvg,
+        rightChildConfig
+    );
+
+    let newConfig = config.clone();
+    newConfig.setMinCenter(
+        Math.trunc((leftChildPos.center + rightChildPos.center) / 2)
+    );
+
+    let wrapper = createNodeWrapper(textNode, bgNode, targetSvg, newConfig);
+    targetSvg.appendChild(wrapper);
+    let center = newConfig.symmetricCenter(svgWidth(bgNode, targetSvg));
+
+    let position = new Position(leftChildPos.left, center, rightChildPos.right);
+    
+    let leftLine = createLine(
+        position.center,
+        newConfig.top + config.lambda.node.radius,
+        leftChildPos.center - position.center,
+        newConfig[configName].line,
+    );
+    targetSvg.appendChild(leftLine);
+
+    let rightLine = createLine(
+        position.center,
+        newConfig.top + config.lambda.node.radius,
+        rightChildPos.center - position.center,
+        newConfig[configName].line,
+    );
+    targetSvg.appendChild(rightLine);
+
+    return position;
 }
 
 function createText(content, nodeClass, nodeConfig) {
@@ -143,11 +263,11 @@ function createText(content, nodeClass, nodeConfig) {
     return textNode;
 }
 
-function createBg(textNode, nodeConfig) {
+function createBg(textNode, targetSvg, nodeConfig) {
     let ellipseNode = createSvgElem('ellipse');
     ellipseNode.setAttribute('rx', Math.max(
         nodeConfig.radius,
-        nodeConfig.textPadding + svgWidth(textNode),
+        nodeConfig.textPadding + svgWidth(textNode, targetSvg),
     ));
     ellipseNode.setAttribute('ry', nodeConfig.backgroundColor);
     ellipseNode.setAttribute('fill', nodeConfig.fillColor);
@@ -157,14 +277,31 @@ function createBg(textNode, nodeConfig) {
     return ellipseNode;
 }
 
-function createNodeWrapper(textNode, bgNode, config) {
+function createLine(left, top, dx, config) {
+    let lineNode = createSvgElem('line');
+    lineNode.setAttribute('x1', 0);
+    lineNode.setAttribute('y1', 0);
+    lineNode.setAttribute('x2', dx);
+    lineNode.setAttribute('y2', config.height);
+    lineNode.setAttribute('stroke-width', config.width);
+    lineNode.setAttribute('stroke', config.color);
+    let gNode = createSvgElem('g');
+    gNode.appendChild(lineNode);
+    gNode.setAttribute(
+        'transform',
+        'translate(' + left + ',' + top + ')'
+    );
+    return gNode;
+}
+
+function createNodeWrapper(textNode, bgNode, targetSvg, config) {
     let gNode = createSvgElem('g');
     gNode.appendChild(bgNode);
     gNode.appendChild(textNode);
 
     let outerGNode = createSvgElem('g');
     outerGNode.appendChild(gNode);
-    let actualLeft = config.actualLeft(svgWidth(bgNode));
+    let actualLeft = config.actualLeft(svgWidth(bgNode, targetSvg));
     outerGNode.setAttribute(
         'transform',
         'translate(' + actualLeft + ',' + config.top + ')'
@@ -198,6 +335,8 @@ class Position {
 
 class Config {
     constructor(changes) {
+        changes = changes || {};
+        
         assignConfig(this, changes, {
             top: 40,
             left: 40,
@@ -236,15 +375,32 @@ class Config {
         };
     }
 
+    setMinCenter(newMinCenter) {
+        this.minCenter = Math.max(this.minCenter, newMinCenter);
+    }
+
     actualLeft(width) {
-        let centerOffset = Math.trunc(width / 2);
+        let centerOffset = width / 2;
         return Math.max(this.left, this.minCenter - centerOffset);
     }
 
-    symmetricPos(width) {
+    actualRight(width) {
+        let left = this.actualLeft(width);
+        return left + width;
+    }
+
+    symmetricCenter(width) {
         let left = this.actualLeft(width);
         let centerOffset = Math.trunc(width / 2);
-        return new Position(left, left + centerOffset, left + width);
+        return left + centerOffset;
+    }
+
+    symmetricPos(width) {
+        return new Position(
+            this.actualLeft(width),
+            this.symmetricCenter(width),
+            this.actualRight(width),
+        );
     }
 
     clone() {
@@ -261,6 +417,10 @@ class NodeConfig {
             strokeColor: '#ffffff',
             textColor: '#000000',
         });
+    }
+
+    get height() {
+        return this.radius * 2;
     }
 
     static defaultForVar(changes) {
@@ -283,7 +443,7 @@ class NodeConfig {
 
     static defaultForLambda(changes) {
         return new this(assignConfig(Object.create(changes), changes, {
-            textColor: '#00ff00',
+            textColor: '#008000',
         }));
     }
 }
@@ -309,7 +469,7 @@ function assignConfigKey(dest, key, source, fallback) {
 
 function assignConfig(dest, source, fallback) {
     source = source || null;
-    for (key in source) {
+    for (let key in fallback) {
         assignConfigKey(dest, key, source, fallback[key]);
     }
     return dest;

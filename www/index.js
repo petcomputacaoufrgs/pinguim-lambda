@@ -1,11 +1,15 @@
 import {
-    drawTerm,
+    init,
+} from './common.js';
+import {
     makeVariable,
     makeApplication,
     makeLambda,
-    init,
+} from './lambda.js';
+import {
+    drawTerm,
     initSvgRoot
-} from './common.js';
+} from './draw.js';
 import * as wasm from "lambda-wasm";
 
 init(() => {
