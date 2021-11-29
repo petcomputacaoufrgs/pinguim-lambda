@@ -29,7 +29,7 @@ init(() => {
                                 makeVariable('f'),
                                 makeApplication(
                                     makeVariable('f'),
-                                    makeVariable('ajsdhashdhasdhhasdh')
+                                    makeVariable('x')
                                 ),
                             ),
                         ),
