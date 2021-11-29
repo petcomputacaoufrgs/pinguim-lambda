@@ -15,9 +15,51 @@ import * as wasm from "lambda-wasm";
 init(() => {
     const svgTarget = document.getElementById('tree');
     initSvgRoot(svgTarget);
-    const term = makeApplication(
-        makeLambda('x', makeVariable('x')),
-        makeLambda('y', makeApplication(makeVariable('f'), makeVariable('y'))),
+    const term = makeLambda(
+        'f',
+        makeLambda(
+            'x',
+            makeApplication(
+                makeApplication(
+                    makeLambda(
+                        'f',
+                        makeLambda(
+                            'x',
+                            makeApplication(
+                                makeVariable('f'),
+                                makeApplication(
+                                    makeVariable('f'),
+                                    makeVariable('x')
+                                ),
+                            ),
+                        ),
+                    ),
+                    makeVariable('f'),
+                ),
+                makeApplication(
+                    makeApplication(
+                        makeLambda(
+                            'f',
+                            makeLambda(
+                                'x',
+                                makeApplication(
+                                    makeVariable('f'),
+                                    makeApplication(
+                                        makeVariable('f'),
+                                        makeApplication(
+                                            makeVariable('f'),
+                                            makeVariable('x')
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                        makeVariable('f'),
+                    ),
+                    makeVariable('x'),
+                ),
+            ),
+        ),
     );
     drawTerm(term, svgTarget);
 });

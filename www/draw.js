@@ -104,8 +104,6 @@ export function drawTerm(term, targetSvg, configChanges) {
 }
 
 function drawTermWith(term, targetSvg, config) {
-    console.log(config);
-
     if (isVariable(term)) {
         return drawVariable(term, targetSvg, config);
     }
@@ -122,9 +120,25 @@ function drawTermWith(term, targetSvg, config) {
 }
 
 function svgWidth(node, targetSvg) {
-    targetSvg.appendChild(node);
+    let inserted = false;
+    let element = node;
+    while (!inserted && element.parentNode != null) {
+        if (element.parentNode == targetSvg) {
+            inserted = true;
+        } else {
+            element = element.parentNode;
+        }
+    }
+    if (!inserted) {
+        targetSvg.appendChild(element);
+    }
     let width = node.getBBox().width;
-    targetSvg.removeChild(node);
+    if (!inserted) {
+        targetSvg.removeChild(element);
+    }
+    if (width == 0) {
+        throw new Error("Element with zero width");
+    }
     return width;
 }
 
@@ -158,11 +172,10 @@ function drawLambda(term, targetSvg, config) {
 
     let newConfig = config.clone();
     newConfig.minCenter = childPos.center;
-    newConfig.left = childPos.left;
     let wrapper = createNodeWrapper(textNode, bgNode, targetSvg, newConfig);
     targetSvg.appendChild(wrapper);
 
-    let position = config.symmetricPos(svgWidth(bgNode, targetSvg));
+    let position = newConfig.symmetricPos(svgWidth(bgNode, targetSvg));
 
     let line = createLine(
         position.center,
@@ -197,7 +210,7 @@ function drawApplication(term, targetSvg, config) {
     let leftChildConfig = config.clone();
     leftChildConfig.setMinCenter(
         config.symmetricCenter(svgWidth(bgNode, targetSvg))
-        - Math.ceil(config.minLeafDistance / 2)
+        - config.minLeafDistance / 2
     );
     leftChildConfig.top += (
         config[configName].line.height
@@ -222,7 +235,7 @@ function drawApplication(term, targetSvg, config) {
 
     let newConfig = config.clone();
     newConfig.setMinCenter(
-        Math.trunc((leftChildPos.center + rightChildPos.center) / 2)
+        (leftChildPos.center + rightChildPos.center) / 2
     );
 
     let wrapper = createNodeWrapper(textNode, bgNode, targetSvg, newConfig);
@@ -267,9 +280,9 @@ function createBg(textNode, targetSvg, nodeConfig) {
     let ellipseNode = createSvgElem('ellipse');
     ellipseNode.setAttribute('rx', Math.max(
         nodeConfig.radius,
-        nodeConfig.textPadding + svgWidth(textNode, targetSvg),
+        nodeConfig.textPadding/2 + svgWidth(textNode, targetSvg),
     ));
-    ellipseNode.setAttribute('ry', nodeConfig.backgroundColor);
+    ellipseNode.setAttribute('ry', nodeConfig.radius);
     ellipseNode.setAttribute('fill', nodeConfig.fillColor);
     ellipseNode.setAttribute('stroke', nodeConfig.strokeColor);
     ellipseNode.setAttribute('cx', 0);
@@ -301,11 +314,13 @@ function createNodeWrapper(textNode, bgNode, targetSvg, config) {
 
     let outerGNode = createSvgElem('g');
     outerGNode.appendChild(gNode);
-    let actualLeft = config.actualLeft(svgWidth(bgNode, targetSvg));
+    let center = config.symmetricCenter(svgWidth(bgNode, targetSvg));
     outerGNode.setAttribute(
         'transform',
-        'translate(' + actualLeft + ',' + config.top + ')'
+        'translate(' + center + ',' + config.top + ')'
     );
+
+    console.log(center);
 
     return outerGNode;
 }
@@ -315,21 +330,6 @@ class Position {
         this.left = left;
         this.center = center;
         this.right = right;
-    }
-
-    static fromSubPos(lefts, center, rights) {
-        let left = center;
-        let right = center;
-
-        for (let pos of lefts) {
-            left = Math.min(left, pos.left);
-        }
-
-        for (let pos of rights) {
-            right = Math.max(right, pos.right);
-        }
-
-        return new this(left, center, right);
     }
 }
 
@@ -391,7 +391,7 @@ class Config {
 
     symmetricCenter(width) {
         let left = this.actualLeft(width);
-        let centerOffset = Math.trunc(width / 2);
+        let centerOffset = width / 2;
         return left + centerOffset;
     }
 
@@ -436,7 +436,7 @@ class NodeConfig {
     static defaultForRedexApp(changes) {
         return new this(assignConfig(Object.create(changes), changes, {
             fillColor: '#e0e0ff',
-            strokeColor: '#ff0000',
+            strokeColor: '#e0e0ff',
             textColor: '#ff0000',
         }));
     }

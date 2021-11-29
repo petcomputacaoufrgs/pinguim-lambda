@@ -11,6 +11,9 @@
     background-color: white;
 }
 
+.lambda-drawing-redex-app {
+    cursor: pointer;
+}
 
 /* CODING AREA */
 .coding-area {
