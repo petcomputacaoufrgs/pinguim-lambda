@@ -221,9 +221,7 @@ function drawApplication(term, targetSvg, config) {
     let leftChildPos = drawTermWith(term.function, targetSvg, leftChildConfig);
 
     let rightChildConfig = config.clone();
-    rightChildConfig.left = (
-        leftChildPos.right + config.minLeafDistance
-    );
+    rightChildConfig.left = leftChildPos.right + config.minLeafDistance;
     rightChildConfig.setMinCenter(rightChildConfig.left);
     rightChildConfig.top += (
         config[configName].line.height

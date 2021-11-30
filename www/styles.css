@@ -47,6 +47,7 @@
 }
 
 #tree-wrapper, #tree {
+    width: 30vw;
     height: 100%;
 }
 
