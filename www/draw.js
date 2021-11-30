@@ -37,7 +37,7 @@ export function initSvgRoot(targetSvg) {
     function move(offset) {
         let attribute = targetSvg.getAttribute('viewBox');
         let pieces;
-        if (attribute == null || attribute == undefined) {
+        if (attribute == null) {
             pieces = [
                 0,
                 0,
@@ -76,7 +76,7 @@ export function initSvgRoot(targetSvg) {
 
             let offset = { x: 0, y: 0 };
 
-            if (evt.type == 'touchstart') {
+            if (evt.type == 'touchmove') {
                 offset.x = evt.touches[0].clientX - current.x;
                 offset.y = evt.touches[0].clientY - current.y;
             } else {
@@ -95,11 +95,12 @@ function createSvgElem(name) {
     return document.createElementNS('http://www.w3.org/2000/svg', name)
 }
 
-export function clearSvg(targetSvg, config) {
+export function clearSvg(targetSvg) {
     targetSvg.replaceChildren();
 }
 
 export function drawTerm(term, targetSvg, configChanges) {
+    clearSvg(targetSvg);
     drawTermWith(term, targetSvg, new Config(configChanges));
 }
 
@@ -209,6 +210,12 @@ function drawApplication(term, targetSvg, config) {
     );
 
     let bgNode = createBg(textNode, targetSvg, config[configName].node);
+
+    if (isRedex) {
+        textNode.addEventListener('click', () => config.onclick(term));
+        bgNode.addEventListener('click', config.onclick(term));
+    }
+
     let leftChildConfig = config.clone();
     leftChildConfig.setMinCenter(
         config.symmetricCenter(svgWidth(bgNode, targetSvg))
@@ -319,8 +326,6 @@ function createNodeWrapper(textNode, bgNode, targetSvg, config) {
         'transform',
         'translate(' + center + ',' + config.top + ')'
     );
-
-    console.log(center);
 
     return outerGNode;
 }

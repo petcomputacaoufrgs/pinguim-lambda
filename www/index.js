@@ -5,12 +5,20 @@ import {
     makeVariable,
     makeApplication,
     makeLambda,
+    stringify,
 } from './lambda.js';
 import {
     drawTerm,
     initSvgRoot
 } from './draw.js';
 import * as wasm from "lambda-wasm";
+
+const actualBtn = document.getElementById('upload_button');
+const fileChosen = document.getElementById('file-chosen');
+actualBtn.addEventListener('change', function(){
+    fileChosen.textContent = this.files[0].name
+});
+
 
 init(() => {
     const svgTarget = document.getElementById('tree');

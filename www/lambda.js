@@ -1,5 +1,5 @@
 export function throwNonLambda() {
-    throw 'Expected a variable, application or lambda'
+    throw new Error('Expected a variable, application or lambda');
 }
 
 export function makeVariable(name) {
@@ -32,12 +32,12 @@ export function stringify(term) {
     }
 
     if (isApplication(term)) {
-        let func = stringifyTerm(term.function);
+        let func = stringify(term.function);
         if (isLambda(term.function)) {
             func = '(' + func + ')';
         } 
 
-        let arg = stringifyTerm(term.argument);
+        let arg = stringify(term.argument);
         if (isLambda(term.argument) || isApplication(term.argument)) {
             arg = '(' + arg + ')';
         } 
@@ -46,7 +46,7 @@ export function stringify(term) {
     }
 
     if (isLambda(term)) {
-        return '\\' + term.paramter + '. ' + stringifyTerm(term.body);
+        return '\\' + term.parameter + '. ' + stringify(term.body);
     } 
 
     throwNonLambda();

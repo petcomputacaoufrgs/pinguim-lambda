@@ -21,12 +21,6 @@ if (currentTheme) {
     }
 }
 
-const actualBtn = document.getElementById('upload_button');
-const fileChosen = document.getElementById('file-chosen');
-actualBtn.addEventListener('change', function(){
-    fileChosen.textContent = this.files[0].name
-});
-
 // Código para verificar se o wasm é suportado]
 // Retirado de https://www.syncfusion.com/faq/how-can-i-check-if-a-browser-supports-webassembly
 const supported = (() => {
