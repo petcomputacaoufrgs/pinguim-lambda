@@ -7,7 +7,11 @@ use token::{Token, TokenType};
 pub fn generate_tokens(
     source: &str,
 ) -> Vec<Token> {
-    todo!()
+    let mut tokens = Vec::new();
+    let mut lexer = Lexer::new(source);
+
+    
+    
 }
 
 #[derive(Debug, Clone)]
@@ -50,21 +54,20 @@ impl<'src> Lexer<'src> {
         self.skip_discardable();
 
         self.clear_current();
-        /*
-        Implementar os condificionais do If:
-            - verificar se o token atual é identificador(Número/Let/In/String)
-            - verificar se o token atual é pontuação(Equal/Dot/OpenPare/CloseParen)
-            - verificar se o token atual é lambda
-            - _ => Error
-        */
+
         if self.is_identifier() {
-            todo!()
+            Ok(self.tokenize_ident())
         } else if let Some(typ) = self.match_punctuation() {
             Ok(self.tokenize_punct(typ))
-        } else if self.is_lambda() {
-            todo!()
         } else {
-            todo!()
+            match self.source.peek() {
+                Some(&character) => {
+                    self.next_char();
+                    self.raise(diagnostics, InvalidChar { character });
+                    Err(Failure::TryAgain)
+                },
+                None => Err(Failure::EndOfInput),
+            }
         }
     }
 
@@ -111,7 +114,6 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    //(Número/Let/In/String)
     fn tokenize_ident(&mut self) -> Token {
         let mut only_number = true;
         while self.is_identifier() {
@@ -124,10 +126,10 @@ impl<'src> Lexer<'src> {
         } else if let Some(keyword) = self.match_keyword() {
             keyword
         } else {
-            todo!()
+            TokenType::Identifier
         };
         
-        //self.make_token(token_type)
+        self.make_token(token_type)
     }
 
     fn tokenize_punct(&mut self, token_type: TokenType) -> Token {
@@ -187,6 +189,7 @@ impl<'src> Lexer<'src> {
                 '.' => Some(TokenType::Dot),
                 '(' => Some(TokenType::OpenParen),
                 ')' => Some(TokenType::CloseParen),
+                '\\' => Some(TokenType::Lambda),
                 _ => None,
             }
             _ => None,

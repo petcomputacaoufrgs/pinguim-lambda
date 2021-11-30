@@ -4,7 +4,7 @@ use std::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(dead_code)]
 pub enum TokenType {
-    Lambda(String),
+    Lambda,
     Identifier,
     Number,
     Equal,
