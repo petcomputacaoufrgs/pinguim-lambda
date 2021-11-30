@@ -10,8 +10,10 @@ pub fn generate_tokens(
     let mut tokens = Vec::new();
     let mut lexer = Lexer::new(source);
 
-    
-    
+    while let Some(token) = lexer.generate_token() {
+        tokens.push(token);
+    }
+    tokens
 }
 
 #[derive(Debug, Clone)]
