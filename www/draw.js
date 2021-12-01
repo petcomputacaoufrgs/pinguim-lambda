@@ -161,34 +161,43 @@ function drawLambda(term, targetSvg, config) {
         'lambda-drawing-lambda',
         config.lambda.node
     );
-
     let bgNode = createBg(textNode, targetSvg, config.lambda.node);
-    let childConfig = config.clone();
     
+    let childPos = drawLambdaChild(term, bgNode, targetSvg, config);
+    let newConfig = config.clone();
+    newConfig.minCenter = childPos.center;
+    drawLambdaNode(textNode, bgNode, childPos, targetSvg, newConfig);
+
+    let position = newConfig.symmetricPos(svgWidth(bgNode, targetSvg));
+    position = position.extend(childPos, childPos);
+
+    drawLambdaLine(position, targetSvg, newConfig);
+
+    return position;
+}
+
+function drawLambdaChild(term, bgNode, targetSvg, config) {
+    let childConfig = config.clone();
     childConfig.setMinCenter(
         config.symmetricCenter(svgWidth(bgNode, targetSvg))
     );
-    childConfig.top += config.lambda.line.height + config.lambda.node.height;
-    let childPos = drawTermWith(term.body, targetSvg, childConfig);
+    childConfig.top += config.levelHeight('lambda');
+    return drawTermWith(term.body, targetSvg, childConfig);
+}
 
-    let newConfig = config.clone();
-    newConfig.minCenter = childPos.center;
-    let wrapper = createNodeWrapper(textNode, bgNode, targetSvg, newConfig);
+function drawLambdaNode(textNode, bgNode, childPos, targetSvg, config) {
+    let wrapper = createNodeWrapper(textNode, bgNode, targetSvg, config);
     targetSvg.appendChild(wrapper);
+}
 
-    let position = newConfig.symmetricPos(svgWidth(bgNode, targetSvg));
-    position.left = Math.min(position.left, childPos.left);
-    position.right = Math.max(position.right, childPos.right);
-
+function drawLambdaLine(position, targetSvg, config) {
     let line = createLine(
         position.center,
-        newConfig.top + config.lambda.node.radius,
+        config.top + config.lambda.node.radius,
         0,
-        newConfig.lambda.line,
+        config.lambda.line,
     );
     targetSvg.appendChild(line);
-
-    return position;
 }
 
 function drawApplication(term, targetSvg, config) {
@@ -221,24 +230,14 @@ function drawApplication(term, targetSvg, config) {
         config.symmetricCenter(svgWidth(bgNode, targetSvg))
         - config.minLeafDistance / 2
     );
-    leftChildConfig.top += (
-        config[configName].line.height
-        + config[configName].node.height
-    );
+    leftChildConfig.top += config.levelHeight(configName);
     let leftChildPos = drawTermWith(term.function, targetSvg, leftChildConfig);
 
     let rightChildConfig = config.clone();
     rightChildConfig.left = leftChildPos.right + config.minLeafDistance;
     rightChildConfig.setMinCenter(rightChildConfig.left);
-    rightChildConfig.top += (
-        config[configName].line.height
-        + config[configName].node.height
-    );
-    let rightChildPos = drawTermWith(
-        term.argument,
-        targetSvg,
-        rightChildConfig
-    );
+    rightChildConfig.top += config.levelHeight(configName);
+    let rightChildPos = drawTermWith(term.argument, targetSvg, rightChildConfig);
 
     let newConfig = config.clone();
     newConfig.setMinCenter(
@@ -336,6 +335,14 @@ class Position {
         this.center = center;
         this.right = right;
     }
+
+    extend(prefix, suffix) {
+        return new this.constructor(
+            Math.min(prefix.left, this.left),
+            this.center,
+            Math.max(this.right, suffix.right)
+        );
+    }
 }
 
 class Config {
@@ -405,6 +412,13 @@ class Config {
             this.actualLeft(width),
             this.symmetricCenter(width),
             this.actualRight(width),
+        );
+    }
+
+    levelHeight(key) {
+        return (
+            this[key].node.height
+            + ('line' in this[key] ? this[key].line.height : 0)
         );
     }
 
