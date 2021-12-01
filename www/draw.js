@@ -5,11 +5,16 @@ import {
     throwNonLambda
 } from './lambda.js';
 
+/**
+ * Inicializa um elemento SVG raiz usado para desenhar termos lambda.
+ *
+ * È adicionado ao SVG a funcionalidade de arrastar, bem como de redimensionar
+ * automaticamente.
+ */
 export function initSvgRoot(targetSvg) {
     document.body.addEventListener('touchstart', dragStart, false);
     document.body.addEventListener('touchend', dragEnd, false);
     document.body.addEventListener('touchmove', drag, false);
-
     document.body.addEventListener('mousedown', dragStart, false);
     document.body.addEventListener('mouseup', dragEnd, false);
     document.body.addEventListener('mousemove', drag, false);
@@ -91,17 +96,61 @@ export function initSvgRoot(targetSvg) {
     }
 }
 
-function createSvgElem(name) {
-    return document.createElementNS('http://www.w3.org/2000/svg', name)
-}
-
+/**
+ * Limpa um elemento SVG raiz.
+ */
 export function clearSvg(targetSvg) {
     targetSvg.replaceChildren();
 }
 
+/**
+ * Desenha um termo lambda no dado elemento SVG raiz, usando as dadas mudanças
+ * nas configurações. Configurações disponíveis:
+ * 
+ * chave: valor padrão // explicação
+ *
+ * top: 40                                  // margem superior
+ * left: 40                                 // margem à esquerda
+ * minCenter: 0                             // posição mínima do centro
+ * minLeafDistance: 20                      // distância mínima entre nodos folhas
+ * onredexclick: term => console.log(term)  // evento disparado ao clicar em redexes
+ * variable.node.radius: 14                 // raio mínimo do contorno dos nodos de variáveis
+ * variable.node.textPadding: 5             // espaçamento ao redor do texto de nodos de variáveis
+ * variable.node.fillColor: '#ffffff'       // cor de preenchimento do fundo de nodos de variáveis
+ * variable.node.strokeColor: '#ffffff'     // cor de contorno do fundo de nodos de variáveis
+ * variable.node.textColor: '#000000'       // cor do texto dos nodos de variáveis
+ * lambda.node.radius: 14                   // raio mínimo do contorno dos nodos de lambdas
+ * lambda.node.textPadding: 5               // espaçamento ao redor do texto de nodos de lambdas
+ * lambda.node.fillColor: '#ffffff'         // cor de preenchimento do fundo de nodos de lambdas
+ * lambda.node.strokeColor: '#ffffff'       // cor de contorno do fundo de nodos de lambdas
+ * lambda.node.textColor: '#008000'         // cor do texto dos nodos de lambdas
+ * lambda.line.width: 2                     // grossura da linha entre lambdas e seus filhos
+ * lambda.line.color: '#0000ff'             // cor da linha entre lambdas e seus filhos
+ * lambda.line.height: 50                   // altura da linha entre lambdas e seus filhos
+ * nonRedexApp.node.radius: 14              // raio mínimo do contorno dos nodos de aplicações
+ * nonRedexApp.node.textPadding: 5          // espaçamento ao redor do texto de nodos de aplicações
+ * nonRedexApp.node.fillColor: '#ffffff'    // cor de preenchimento do fundo de nodos de aplicações 
+ * nonRedexApp.node.strokeColor: '#ffffff'  // cor de contorno do fundo de nodos de aplicações
+ * nonRedexApp.node.textColor: '#ff6000'    // cor do texto dos nodos de aplicações
+ * nonRedexApp.line.width: 2                // grossura da linha entre aplicações e seus filhos
+ * nonRedexApp.line.color: '#0000ff'        // cor da linha entre aplicações e seus filhos
+ * nonRedexApp.line.height: 50              // altura da linha entre aplicações e seus filhos
+ * redexApp.node.radius: 14                 // raio mínimo do contorno dos nodos de redexes
+ * redexApp.node.textPadding: 5             // espaçamento ao redor do texto de nodos de redexes
+ * redexApp.node.fillColor: '#e0e0ff'       // cor de preenchimento do fundo de nodos de redexes 
+ * redexApp.node.strokeColor: '#e0e0ff'     // cor de contorno do fundo de nodos de redexes
+ * redexApp.node.textColor: '#ff0000'       // cor do texto dos nodos de redexes
+ * redexApp.line.width: 2                   // grossura da linha entre redexes e seus filhos
+ * redexApp.line.color: '#0000ff'           // cor da linha entre redexes e seus filhos
+ * redexApp.line.height: 50                 // altura da linha entre redexes e seus filhos
+ */
 export function drawTerm(term, targetSvg, configChanges) {
     clearSvg(targetSvg);
     drawTermWith(term, targetSvg, new Config(configChanges));
+}
+
+function createSvgElem(name) {
+    return document.createElementNS('http://www.w3.org/2000/svg', name)
 }
 
 function drawTermWith(term, targetSvg, config) {
@@ -225,8 +274,8 @@ function drawApplication(term, targetSvg, config) {
     );
     let bgNode = createBg(textNode, targetSvg, config[configName].node);
     if (isRedex) {
-        textNode.addEventListener('click', () => config.onclick(term));
-        bgNode.addEventListener('click', () => config.onclick(term));
+        textNode.addEventListener('click', () => config.onredexclick(term));
+        bgNode.addEventListener('click', () => config.onredexclick(term));
     }
 
     let leftChildPos = drawAppLeftChild(
@@ -438,7 +487,7 @@ class Config {
             left: 40,
             minCenter: 0,
             minLeafDistance: 20,
-            onclick: term => console.log(term),
+            onredexclick: term => console.log(term),
         });
         this.variable = {
             node: NodeConfig.defaultForVar(
