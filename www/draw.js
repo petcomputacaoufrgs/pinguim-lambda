@@ -222,7 +222,7 @@ function drawApplication(term, targetSvg, config) {
 
     if (isRedex) {
         textNode.addEventListener('click', () => config.onclick(term));
-        bgNode.addEventListener('click', config.onclick(term));
+        bgNode.addEventListener('click', () => config.onclick(term));
     }
 
     let leftChildConfig = config.clone();
