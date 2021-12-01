@@ -13,7 +13,7 @@ export function initSvgRoot(targetSvg) {
     document.body.addEventListener('mousedown', dragStart, false);
     document.body.addEventListener('mouseup', dragEnd, false);
     document.body.addEventListener('mousemove', drag, false);
-    targetSvg.addEventListener('resize', resize, false);
+    window.addEventListener('resize', resize);
 
     let current = { x: 0, y: 0 };
     let dragging = false;
