@@ -192,6 +192,20 @@ impl<'src> Lexer<'src> {
         }
     }
 
+    fn is_number(&mut self) -> bool {
+        match self.source.peek() {
+            Some(&character) => character.is_ascii_digit(),
+            None => false,
+        }
+    }
+
+    fn raise<E>(&mut self, diagnostics: &mut Diagnostics, cause: E)
+    where
+        E: StdError + Send + Sync + 'static,
+    {
+        diagnostics.raise(Error::new(cause, self.token_span));
+    }
+
     fn match_keyword(&self) ->  Option<TokenType> {
         match self.token_content.as_str() {
             "let" => Some(TokenType::Let),
