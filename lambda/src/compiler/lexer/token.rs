@@ -18,8 +18,8 @@ pub enum TokenType {
 impl fmt::Display for TokenType {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TokenType::Lambda(parameter) => {
-                write!(formatter, "\\{}", parameter)
+            TokenType::Lambda => {
+                write!(formatter, "\\")
             },  
             TokenType::Identifier => write!(formatter, "<identificador>"),
             TokenType::Number => write!(formatter, "<número>"),
@@ -31,6 +31,7 @@ impl fmt::Display for TokenType {
             TokenType::CloseParen => write!(formatter, ")"),
         }
     }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Token {

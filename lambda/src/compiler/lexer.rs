@@ -1,3 +1,7 @@
+#[cfg(test)]
+mod test;
+
+pub mod error;
 pub mod token;
 
 use super::error::{Diagnostics, Error};
@@ -59,7 +63,7 @@ impl<'src> Lexer<'src> {
         &mut self,
         diagnostics: &mut Diagnostics,
     ) -> Result<Token, Failure> {
-        self.skip_discardable();
+        self.skip_discardable(diagnostics);
 
         self.clear_current();
 
