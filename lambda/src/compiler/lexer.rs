@@ -6,13 +6,15 @@ use token::{Token, TokenType};
 
 pub fn generate_tokens(
     source: &str,
+    diagnostics: &mut Diagnostics,
 ) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut lexer = Lexer::new(source);
 
-    while let Some(token) = lexer.generate_token() {
+    while let Some(token) = lexer.generate_token(diagnostics) {
         tokens.push(token);
     }
+    
     tokens
 }
 
@@ -40,9 +42,10 @@ impl<'src> Lexer<'src> {
 
     fn generate_token(
         &mut self,
+        diagnostics: &mut Diagnostics,
     ) -> Option<Token> {
         loop {
-            match self.try_generate_token() {
+            match self.try_generate_token(diagnostics) {
                 Ok(token) => break Some(token),
                 Err(Failure::EndOfInput) => break None,
                 Err(Failure::TryAgain) => (),
@@ -52,6 +55,7 @@ impl<'src> Lexer<'src> {
 
     fn try_generate_token (
         &mut self,
+        diagnostics: &mut Diagnostics,
     ) -> Result<Token, Failure> {
         self.skip_discardable();
 
@@ -85,8 +89,11 @@ impl<'src> Lexer<'src> {
         self.token_span.finish();
     }
 
-    fn skip_discardable(&mut self) {
-        while self.skip_whitespace() || self.skip_comment() {}
+    fn skip_discardable(
+        &mut self,
+        diagnostics: &mut Diagnostics,
+    ) {
+        while self.skip_whitespace() || self.skip_comment(diagnostics) {}
     } 
 
     fn skip_whitespace(&mut self) -> bool {
@@ -98,14 +105,17 @@ impl<'src> Lexer<'src> {
         skipped
     }
 
-    fn skip_comment(&mut self) -> bool {
+    fn skip_comment(
+        &mut self,
+        diagnostics: &mut Diagnostics,
+    ) -> bool {
         if self.is_comment_start() {
             self.clear_current();
             self.next_char();
             if self.is_comment_start() {
                 self.next_char();
             } else {
-                //self.raise(diagnostics, BadCommentStart)
+                self.raise(diagnostics, BadCommentStart)
             }
             while !self.is_comment_end() {
                 self.next_char();
