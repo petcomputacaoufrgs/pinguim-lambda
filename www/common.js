@@ -1,26 +1,6 @@
 import * as styles from './styles.css';
 import * as commonStyles from './common_styles.css';
 
-const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
-function switchTheme(e) {
-    if (e.target.checked) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    }
-    else {
-        document.documentElement.setAttribute('data-theme', 'light');
-    }    
-}
-toggleSwitch.addEventListener('change', switchTheme, false);
-
-const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
-if (currentTheme) {
-    document.documentElement.setAttribute('data-theme', currentTheme);
-
-    if (currentTheme === 'dark') {
-        toggleSwitch.checked = true;
-    }
-}
-
 // Código para verificar se o wasm é suportado]
 // Retirado de https://www.syncfusion.com/faq/how-can-i-check-if-a-browser-supports-webassembly
 const supported = (() => {
@@ -35,6 +15,33 @@ const supported = (() => {
     } catch (e) { }
     return false;
 })();
+
+if (!supported) {
+    alert("Seu navegador não suporta WebAssembly\nmude de navegador ou use a versão antiga");
+}
+
+const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+const toggleIcon = document.getElementById('toggle-icon');
+function switchTheme(e) {
+    if (e.target.checked) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        toggleIcon.innerHTML = 'dark_mode';
+    }
+    else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        toggleIcon.innerHTML = 'light_mode';
+    }    
+}
+toggleSwitch.addEventListener('change', switchTheme, false);
+
+const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+if (currentTheme) {
+    document.documentElement.setAttribute('data-theme', currentTheme);
+
+    if (currentTheme === 'dark') {
+        toggleSwitch.checked = true;
+    }
+}
 
 export const init = (() => {
     let handlers = [];
