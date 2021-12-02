@@ -1,5 +1,7 @@
 pub mod token;
 
+use super::error::{Diagnostics, Error};
+use error::{BadCommentStart, InvalidChar};
 use crate::compiler::position::Span;
 use std::{error::Error as StdError, iter::Peekable, str};
 use token::{Token, TokenType};
