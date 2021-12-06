@@ -6,6 +6,7 @@ mod test;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem;
+use std::ops::{Deref, DerefMut};
 
 /// Representação recursiva de um termo Lambda.
 ///
@@ -64,7 +65,7 @@ pub enum Value {
     ///                 function: Variable("f"),
     ///                 argument: Variable("x")
     ///             }`
-    Application { function: Box<Value>, argument: Box<Value> },
+    Application { function: NestedValue, argument: NestedValue },
 
     /// Uma abstração Lambda com parâmetro e corpo.
     ///
@@ -72,7 +73,7 @@ pub enum Value {
     ///                 parameter: "x",
     ///                 body: Variable("y"),
     ///             }`
-    Lambda { parameter: String, body: Box<Value> },
+    Lambda { parameter: String, body: NestedValue },
 }
 
 impl Value {
@@ -82,16 +83,16 @@ impl Value {
 
         for _ in 0..number {
             body = Value::Application {
-                function: Box::new(Value::Variable(String::from("f"))),
-                argument: Box::new(body),
+                function: NestedValue::new(Value::Variable(String::from("f"))),
+                argument: NestedValue::new(body),
             };
         }
 
         Value::Lambda {
             parameter: String::from("f"),
-            body: Box::new(Value::Lambda {
+            body: NestedValue::new(Value::Lambda {
                 parameter: String::from("x"),
-                body: Box::new(body),
+                body: NestedValue::new(body),
             }),
         }
     }
@@ -255,10 +256,12 @@ impl Value {
             Value::Variable(_) => false,
 
             Value::Application { function, argument } => {
-                if let Value::Lambda { parameter, body } = function.as_mut() {
+                if let Value::Lambda { parameter, body } =
+                    function.as_mut_value()
+                {
                     body.replace(parameter, argument);
                     *self = mem::replace(
-                        body.as_mut(),
+                        body.as_mut_value(),
                         Value::Variable(String::new()),
                     );
                     true
@@ -302,6 +305,66 @@ impl Value {
                 body.unbound_vars_at(unbound_set, bound_set);
                 if was_inserted {
                     bound_set.remove(parameter.as_str());
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct NestedValue {
+    inner: Box<Value>,
+}
+
+impl NestedValue {
+    pub fn new(value: Value) -> Self {
+        Self { inner: Box::new(value) }
+    }
+
+    pub fn as_value(&self) -> &Value {
+        &self.inner
+    }
+
+    pub fn as_mut_value(&mut self) -> &mut Value {
+        &mut self.inner
+    }
+
+    pub fn into_value(mut self) -> Value {
+        self.take_value()
+    }
+
+    fn take_value(&mut self) -> Value {
+        mem::replace(&mut self.inner, Value::Variable(String::new()))
+    }
+}
+
+impl Deref for NestedValue {
+    type Target = Value;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_value()
+    }
+}
+
+impl DerefMut for NestedValue {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_mut_value()
+    }
+}
+
+impl Drop for NestedValue {
+    fn drop(&mut self) {
+        let mut drop_stack = vec![self.take_value()];
+
+        while let Some(value) = drop_stack.pop() {
+            match value {
+                Value::Variable(_) => (),
+                Value::Application { function, argument } => {
+                    drop_stack.push(function.into_value());
+                    drop_stack.push(argument.into_value());
+                }
+                Value::Lambda { parameter: _, body } => {
+                    drop_stack.push(body.into_value());
                 }
             }
         }

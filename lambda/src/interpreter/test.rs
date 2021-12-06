@@ -1,5 +1,6 @@
 use super::run_once;
 use super::Interpreter;
+use crate::value::NestedValue;
 use crate::value::Value;
 
 #[test]
@@ -7,29 +8,33 @@ fn capture() {
     //λa. (λx. λa. x a) a
     let input_value = Value::Lambda {
         parameter: String::from("a"),
-        body: Box::new(Value::Application {
-            function: Box::new(Value::Lambda {
+        body: NestedValue::new(Value::Application {
+            function: NestedValue::new(Value::Lambda {
                 parameter: String::from("x"),
-                body: Box::new(Value::Lambda {
+                body: NestedValue::new(Value::Lambda {
                     parameter: String::from("a"),
-                    body: Box::new(Value::Application {
-                        function: Box::new(Value::Variable(String::from("x"))),
-                        argument: Box::new(Value::Variable(String::from("a"))),
+                    body: NestedValue::new(Value::Application {
+                        function: NestedValue::new(Value::Variable(
+                            String::from("x"),
+                        )),
+                        argument: NestedValue::new(Value::Variable(
+                            String::from("a"),
+                        )),
                     }),
                 }),
             }),
-            argument: Box::new(Value::Variable(String::from("a"))),
+            argument: NestedValue::new(Value::Variable(String::from("a"))),
         }),
     };
 
     //λa. (λa_. a a_)
     let output_value = Value::Lambda {
         parameter: String::from("a"),
-        body: Box::new(Value::Lambda {
+        body: NestedValue::new(Value::Lambda {
             parameter: String::from("a_"),
-            body: Box::new(Value::Application {
-                function: Box::new(Value::Variable(String::from("a"))),
-                argument: Box::new(Value::Variable(String::from("a_"))),
+            body: NestedValue::new(Value::Application {
+                function: NestedValue::new(Value::Variable(String::from("a"))),
+                argument: NestedValue::new(Value::Variable(String::from("a_"))),
             }),
         }),
     };
@@ -42,29 +47,29 @@ fn rename_capture() {
     // λa_. λa. (λx. λa. x a a_) a
     let input_value = Value::Lambda {
         parameter: String::from("a_"),
-        body: Box::new(Value::Lambda {
+        body: NestedValue::new(Value::Lambda {
             parameter: String::from("a"),
-            body: Box::new(Value::Application {
-                function: Box::new(Value::Lambda {
+            body: NestedValue::new(Value::Application {
+                function: NestedValue::new(Value::Lambda {
                     parameter: String::from("x"),
-                    body: Box::new(Value::Lambda {
+                    body: NestedValue::new(Value::Lambda {
                         parameter: String::from("a"),
-                        body: Box::new(Value::Application {
-                            function: Box::new(Value::Application {
-                                function: Box::new(Value::Variable(
+                        body: NestedValue::new(Value::Application {
+                            function: NestedValue::new(Value::Application {
+                                function: NestedValue::new(Value::Variable(
                                     String::from("x"),
                                 )),
-                                argument: Box::new(Value::Variable(
+                                argument: NestedValue::new(Value::Variable(
                                     String::from("a"),
                                 )),
                             }),
-                            argument: Box::new(Value::Variable(String::from(
-                                "a_",
-                            ))),
+                            argument: NestedValue::new(Value::Variable(
+                                String::from("a_"),
+                            )),
                         }),
                     }),
                 }),
-                argument: Box::new(Value::Variable(String::from("a"))),
+                argument: NestedValue::new(Value::Variable(String::from("a"))),
             }),
         }),
     };
@@ -72,18 +77,22 @@ fn rename_capture() {
     // λa_. λa. (λa__. a a__ a_)
     let output_value = Value::Lambda {
         parameter: String::from("a_"),
-        body: Box::new(Value::Lambda {
+        body: NestedValue::new(Value::Lambda {
             parameter: String::from("a"),
-            body: Box::new(Value::Lambda {
+            body: NestedValue::new(Value::Lambda {
                 parameter: String::from("a__"),
-                body: Box::new(Value::Application {
-                    function: Box::new(Value::Application {
-                        function: Box::new(Value::Variable(String::from("a"))),
-                        argument: Box::new(Value::Variable(String::from(
-                            "a__",
-                        ))),
+                body: NestedValue::new(Value::Application {
+                    function: NestedValue::new(Value::Application {
+                        function: NestedValue::new(Value::Variable(
+                            String::from("a"),
+                        )),
+                        argument: NestedValue::new(Value::Variable(
+                            String::from("a__"),
+                        )),
                     }),
-                    argument: Box::new(Value::Variable(String::from("a_"))),
+                    argument: NestedValue::new(Value::Variable(String::from(
+                        "a_",
+                    ))),
                 }),
             }),
         }),
@@ -96,8 +105,8 @@ fn rename_capture() {
 fn two_power_three() {
     // (λf. λx. f (f (f x))) (λf. λx. f (f x))
     let input_value = Value::Application {
-        function: Box::new(Value::church_numeral(3)),
-        argument: Box::new(Value::church_numeral(2)),
+        function: NestedValue::new(Value::church_numeral(3)),
+        argument: NestedValue::new(Value::church_numeral(2)),
     };
 
     // λf. λx. f (f (f (f (f (f (f (f x)))))))
@@ -109,32 +118,38 @@ fn two_power_three() {
 fn steps() {
     // (λx. x x x) (λy. y) (λz. z)
     let input_value = Value::Application {
-        function: Box::new(Value::Application {
-            function: Box::new(Value::Lambda {
+        function: NestedValue::new(Value::Application {
+            function: NestedValue::new(Value::Lambda {
                 parameter: String::from("x"),
-                body: Box::new(Value::Application {
-                    function: Box::new(Value::Application {
-                        function: Box::new(Value::Variable(String::from("x"))),
-                        argument: Box::new(Value::Variable(String::from("x"))),
+                body: NestedValue::new(Value::Application {
+                    function: NestedValue::new(Value::Application {
+                        function: NestedValue::new(Value::Variable(
+                            String::from("x"),
+                        )),
+                        argument: NestedValue::new(Value::Variable(
+                            String::from("x"),
+                        )),
                     }),
-                    argument: Box::new(Value::Variable(String::from("x"))),
+                    argument: NestedValue::new(Value::Variable(String::from(
+                        "x",
+                    ))),
                 }),
             }),
-            argument: Box::new(Value::Lambda {
+            argument: NestedValue::new(Value::Lambda {
                 parameter: String::from("y"),
-                body: Box::new(Value::Variable(String::from("y"))),
+                body: NestedValue::new(Value::Variable(String::from("y"))),
             }),
         }),
-        argument: Box::new(Value::Lambda {
+        argument: NestedValue::new(Value::Lambda {
             parameter: String::from("z"),
-            body: Box::new(Value::Variable(String::from("z"))),
+            body: NestedValue::new(Value::Variable(String::from("z"))),
         }),
     };
 
     // (λz. z)
     let output_value = Value::Lambda {
         parameter: String::from("z"),
-        body: Box::new(Value::Variable(String::from("z"))),
+        body: NestedValue::new(Value::Variable(String::from("z"))),
     };
 
     let mut interpreter = Interpreter::new(input_value);
