@@ -5,6 +5,8 @@ import {
     throwNonLambda
 } from './lambda.js';
 
+const classPrefix = 'drawing';
+
 /**
  * Limpa um elemento SVG raiz.
  */
@@ -85,8 +87,25 @@ export function initSvgRoot(targetSvg) {
      * redimensionar o SVG.
      */
     function resize() {
+        let viewBox = targetSvg.getAttribute('viewBox');
+
         targetSvg.removeAttribute('width');
         targetSvg.removeAttribute('height');
+        targetSvg.removeAttribute('viewBox');
+
+        let pieces;
+        if (viewBox == null) {
+            pieces = [
+                0,
+                0,
+                targetSvg.width.baseVal.value,
+                targetSvg.height.baseVal.value,
+            ];
+        } else {
+            pieces = viewBox.split(' ').map(str => parseInt(str.trim()));
+            pieces[2] = targetSvg.width.baseVal.value;
+            pieces[3] = targetSvg.height.baseVal.value;
+        }
 
         targetSvg.setAttribute(
             'width',
@@ -96,15 +115,16 @@ export function initSvgRoot(targetSvg) {
             'height',
             targetSvg.height.baseVal.value
         );
+        targetSvg.setAttribute('viewBox', pieces.join(' '));
     }
 
     /**
      * "Move" o SVG pelo dado `offset` a partir da localização atual.
      */
     function move(offset) {
-        let attribute = targetSvg.getAttribute('viewBox');
+        let viewBox = targetSvg.getAttribute('viewBox');
         let pieces;
-        if (attribute == null) {
+        if (viewBox == null) {
             pieces = [
                 0,
                 0,
@@ -112,7 +132,7 @@ export function initSvgRoot(targetSvg) {
                 targetSvg.height.baseVal.value,
             ];
         } else {
-            pieces = attribute.split(' ').map(str => parseInt(str.trim()));
+            pieces = viewBox.split(' ').map(str => parseInt(str.trim()));
         }
         pieces[0] -= offset.x;
         pieces[1] -= offset.y;
@@ -229,12 +249,13 @@ function svgWidth(node, targetSvg) {
  * Desenha um termo do tipo variável na imagem.
  */
 function drawVariable(term, targetSvg, config) {
-    let textNode = createText(
-        term.varname,
-        'lambda-drawing-variable',
+    let textNode = createText(term.varname, 'variable', config.variable.node);
+    let bgNode = createBg(
+        textNode,
+        targetSvg,
+        'variable',
         config.variable.node
     );
-    let bgNode = createBg(textNode, targetSvg, config.variable.node);
     let wrapper = createNodeWrapper(textNode, bgNode, targetSvg, config);
     targetSvg.appendChild(wrapper);
     return config.symmetricPos(svgWidth(bgNode, targetSvg));
@@ -246,10 +267,10 @@ function drawVariable(term, targetSvg, config) {
 function drawLambda(term, targetSvg, config) {
     let textNode = createText(
         'λ' + term.parameter,
-        'lambda-drawing-lambda',
+        'lambda',
         config.lambda.node
     );
-    let bgNode = createBg(textNode, targetSvg, config.lambda.node);
+    let bgNode = createBg(textNode, targetSvg, 'lambda', config.lambda.node);
     
     let childPos = drawLambdaBody(term.body, bgNode, targetSvg, config);
     let newConfig = drawLambdaNode(
@@ -303,6 +324,7 @@ function drawLambdaLine(position, targetSvg, config) {
         position.center,
         config.top + config.lambda.node.radius,
         0,
+        'lambda',
         config.lambda.line,
     );
     targetSvg.appendChild(line);
@@ -316,18 +338,24 @@ function drawApplication(term, targetSvg, config) {
     let configName, nodeClass;
     if (isRedex) {
         configName = 'redexApp';
-        nodeClass = 'lambda-drawing-redex-app';
+        nodeClass = 'redex-app';
     } else {
         configName = 'nonRedexApp';
-        nodeClass = 'lambda-drawing-non-redex-app';
+        nodeClass = 'non-redex-app';
     }
 
     let textNode = createText(
         '@',
-        'lambda-drawing-lambda ' + nodeClass,
+        nodeClass,
         config[configName].node
     );
-    let bgNode = createBg(textNode, targetSvg, config[configName].node);
+    let bgNode = createBg(
+        textNode,
+        targetSvg,
+        nodeClass,
+        config[configName].node
+    );
+
     if (isRedex) {
         textNode.addEventListener('click', () => config.onredexclick(term));
         bgNode.addEventListener('click', () => config.onredexclick(term));
@@ -367,6 +395,7 @@ function drawApplication(term, targetSvg, config) {
         leftChildPos,
         rightChildPos,
         targetSvg,
+        nodeClass,
         configName,
         newConfig,
     );
@@ -443,11 +472,26 @@ function drawAppLines(
     leftChildPos,
     rightChildPos,
     targetSvg,
+    lineClass,
     configName,
     config,
 ) {
-    drawAppLeftLine(position, leftChildPos, targetSvg, configName, config);
-    drawAppRightLine(position, rightChildPos, targetSvg, configName, config);
+    drawAppLeftLine(
+        position,
+        leftChildPos,
+        targetSvg,
+        lineClass,
+        configName,
+        config
+    );
+    drawAppRightLine(
+        position,
+        rightChildPos,
+        targetSvg,
+        lineClass,
+        configName,
+        config
+    );
 }
 
 /**
@@ -459,6 +503,7 @@ function drawAppLeftLine(
     position,
     leftChildPos,
     targetSvg,
+    lineClass,
     configName,
     config,
 ) {
@@ -466,6 +511,7 @@ function drawAppLeftLine(
         position.center,
         config.top + config.lambda.node.radius,
         leftChildPos.center - position.center,
+        lineClass,
         config[configName].line,
     );
     targetSvg.appendChild(leftLine);
@@ -480,6 +526,7 @@ function drawAppRightLine(
     position,
     rightChildPos,
     targetSvg,
+    lineClass,
     configName,
     config,
 ) {
@@ -487,6 +534,7 @@ function drawAppRightLine(
         position.center,
         config.top + config.lambda.node.radius,
         rightChildPos.center - position.center,
+        lineClass,
         config[configName].line,
     );
     targetSvg.appendChild(rightLine);
@@ -498,14 +546,13 @@ function drawAppRightLine(
  */
 function createText(content, nodeClass, nodeConfig) {
     let textNode = createSvgElem('text');
-    textNode.setAttribute('fill', nodeConfig.textColor);
     textNode.setAttribute('text-anchor', 'middle');
     textNode.setAttribute(
         'transform',
         'translate(0,' + nodeConfig.textPadding + ')'
     );
     textNode.textContent = content;
-    textNode.setAttribute('class', 'lambda-drawing ' + nodeClass);
+    textNode.setAttribute('class', classPrefix + "-" + nodeClass + "-text");
     return textNode;
 }
 
@@ -513,17 +560,16 @@ function createText(content, nodeClass, nodeConfig) {
  * Cria um nodo SVG de fundo (elipse), para contornar o dado nodo de texto, com
  * configuração do tipo específico de nodo.
  */
-function createBg(textNode, targetSvg, nodeConfig) {
+function createBg(textNode, targetSvg, nodeClass, nodeConfig) {
     let ellipseNode = createSvgElem('ellipse');
     ellipseNode.setAttribute('rx', Math.max(
         nodeConfig.radius,
         nodeConfig.textPadding/2 + svgWidth(textNode, targetSvg),
     ));
     ellipseNode.setAttribute('ry', nodeConfig.radius);
-    ellipseNode.setAttribute('fill', nodeConfig.fillColor);
-    ellipseNode.setAttribute('stroke', nodeConfig.strokeColor);
     ellipseNode.setAttribute('cx', 0);
     ellipseNode.setAttribute('cy', 0);
+    ellipseNode.setAttribute('class', classPrefix + "-" + nodeClass + "-bg");
     return ellipseNode;
 }
 
@@ -531,14 +577,16 @@ function createBg(textNode, targetSvg, nodeConfig) {
  * Cria uma linha saindo da dada posição à esquerda e ao tipo, indo `dx`
  * valores para à direita, e configuração do tipo específico da linha.
  */
-function createLine(left, top, dx, config) {
+function createLine(left, top, dx, lineClass, config) {
     let lineNode = createSvgElem('line');
     lineNode.setAttribute('x1', 0);
     lineNode.setAttribute('y1', 0);
     lineNode.setAttribute('x2', dx);
     lineNode.setAttribute('y2', config.height);
     lineNode.setAttribute('stroke-width', config.width);
-    lineNode.setAttribute('stroke', config.color);
+
+    lineNode.setAttribute('class', classPrefix + '-' + lineClass + '-line');
+
     let gNode = createSvgElem('g');
     gNode.appendChild(lineNode);
     gNode.setAttribute(

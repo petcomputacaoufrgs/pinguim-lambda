@@ -8,11 +8,7 @@
 }
 
 #tree {
-    background-color: white;
-}
-
-.lambda-drawing-redex-app {
-    cursor: pointer;
+    background-color: var(--full-drawing-background);
 }
 
 /* CODING AREA */
@@ -73,4 +69,38 @@
         margin: 0 2vw;
         width: 90vw;
     }
+}
+
+.drawing-variable-bg, .drawing-lambda-bg, .drawing-non-redex-app-bg {
+    fill: var(--default-drawing-background);
+}
+
+.drawing-redex-app-bg {
+    fill: var(--redex-drawing-background);
+    stroke: var(--redex-drawing-border);
+}
+
+.drawing-variable-text {
+    fill: var(--drawing-variable-color);
+}
+
+.drawing-lambda-text {
+    fill: var(--drawing-lambda-color);
+}
+
+.drawing-non-redex-app-text {
+    fill: var(--drawing-non-redex-at-color);
+}
+
+.drawing-redex-app-text {
+    fill: var(--drawing-redex-at-color);
+    font-weight: bold;
+}
+
+.drawing-lambda-line, .drawing-redex-app-line, .drawing-non-redex-app-line {
+    stroke: var(--drawing-line-color);
+}
+
+.drawing-redex-app-text, .drawing-redex-app-bg {
+    cursor: pointer;
 }

@@ -7,6 +7,10 @@
     --execution-button-background: #C19898;
     --textarea-background: transparent;
     --register-lighter-background: #DDC6C6;
+    --full-drawing-background: #282828;
+    --default-drawing-background: #40403d;
+    --redex-drawing-background: #40403d;
+    --redex-drawing-border: #F84B3C;
 
     /* Colors */
     --header-font-color: #EBEBE3;
@@ -17,8 +21,11 @@
     --textarea-scrollbar: #4A4A48;
     --code-font-color: rgba(0, 0, 0, 0);
     --code-reserved-words: #F84B3C;
-    --code-built-in-funcs: #F9BC41;
-    --code-label-color: #8FBF7F;
+    --drawing-lambda-color: #F9BC41;
+    --drawing-variable-color: #8FBF7F;
+    --drawing-non-redex-at-color: #D2C656;
+    --drawing-redex-at-color: #F84B3C;
+    --drawing-line-color: #EBEBE3;
     --code-background-color: #282828;
     --error-font-color: #FF7676;
     --highlight-color: #D2C656;
