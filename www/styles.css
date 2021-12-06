@@ -90,6 +90,7 @@
 
 .drawing-non-redex-app-text {
     fill: var(--drawing-non-redex-at-color);
+    font-weight: bold;
 }
 
 .drawing-redex-app-text {

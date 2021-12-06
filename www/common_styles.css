@@ -7,6 +7,8 @@
     --execution-button-background: #C19898;
     --textarea-background: transparent;
     --register-lighter-background: #DDC6C6;
+
+    /* Drawing Backgrounds */
     --full-drawing-background: #282828;
     --default-drawing-background: #40403d;
     --redex-drawing-background: #40403d;
@@ -21,14 +23,18 @@
     --textarea-scrollbar: #4A4A48;
     --code-font-color: rgba(0, 0, 0, 0);
     --code-reserved-words: #F84B3C;
+    --code-built-in-funcs: #F9BC41;
+    --code-label-color: #8FBF7F;
+    --code-background-color: #282828;
+    --error-font-color: #FF7676;
+    --highlight-color: #D2C656;
+
+    /* Drawing Text */
     --drawing-lambda-color: #F9BC41;
     --drawing-variable-color: #8FBF7F;
     --drawing-non-redex-at-color: #D2C656;
     --drawing-redex-at-color: #F84B3C;
     --drawing-line-color: #EBEBE3;
-    --code-background-color: #282828;
-    --error-font-color: #FF7676;
-    --highlight-color: #D2C656;
 
     /* General colors */
     --dark-color: #121212;
@@ -41,6 +47,12 @@
     --execution-button-background: #B9A1D8;
     --textarea-background: transparent;
     --register-lighter-background: #DCD3E7;
+
+    /* Drawing Backgrounds */
+    --full-drawing-background: #FBF2D1;
+    --default-drawing-background: #F3EAE4;
+    --redex-drawing-background: #F3EAE4;
+    --redex-drawing-border: #9B0511;
 
     /* Colors */
     --header-font-color: #F5F5F5;
@@ -56,6 +68,13 @@
     --code-background-color: #FBF2D1;
     --error-font-color: #FF5977;
     --highlight-color: #B9A1D8;
+
+    /* Drawing Text */
+    --drawing-lambda-color: #B47523;
+    --drawing-variable-color: #447A59;
+    --drawing-non-redex-at-color: #67B6B6;
+    --drawing-redex-at-color: #9B0511;
+    --drawing-line-color: #67B6B6;
 }
 
 
