@@ -354,9 +354,10 @@ impl DerefMut for NestedValue {
 
 impl Drop for NestedValue {
     fn drop(&mut self) {
-        let mut drop_stack = vec![self.take_value()];
+        let mut cur_value = Some(self.take_value());
+        let mut drop_stack = Vec::new();
 
-        while let Some(value) = drop_stack.pop() {
+        while let Some(value) = cur_value.take() {
             match value {
                 Value::Variable(_) => (),
                 Value::Application { function, argument } => {
@@ -367,6 +368,8 @@ impl Drop for NestedValue {
                     drop_stack.push(body.into_value());
                 }
             }
+
+            cur_value = drop_stack.pop();
         }
     }
 }
