@@ -222,6 +222,7 @@ impl<'src> Lexer<'src> {
                 '(' => Some(TokenType::OpenParen),
                 ')' => Some(TokenType::CloseParen),
                 '\\' => Some(TokenType::Lambda),
+                ';' => Some(TokenType::Semicolon),
                 _ => None,
             }
             _ => None,

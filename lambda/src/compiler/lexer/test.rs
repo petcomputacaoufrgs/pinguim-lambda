@@ -268,6 +268,317 @@ fn token_close_paren() {
 }
 
 #[test]
+fn token_semicolon() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(";", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[
+            Token {
+                token_type: TokenType::Semicolon,
+                content: ";".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 1,
+                        utf8_index: 0,
+                        utf16_index: 0,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 2,
+                        utf8_index: 1,
+                        utf16_index: 1,
+                    },
+                }
+            }
+        ]
+    )
+}
+
+fn token_lambda_with_spaces() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens("  \\  ", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[Token {
+            token_type: TokenType::Lambda,
+            content: "\\".to_owned(),
+            span: Span {
+                start: Position {
+                    line: 1,
+                    column: 3,
+                    utf8_index: 2,
+                    utf16_index: 2,
+                },
+                end: Position {
+                    line: 1,
+                    column: 4,
+                    utf8_index: 3,
+                    utf16_index: 3,
+                },
+            },
+        }]
+    );
+}
+
+#[test]
+fn token_identifier_with_spaces() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens("   lambda    ", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[Token {
+            token_type: TokenType::Identifier,
+            content: "lambda".to_owned(),
+            span: Span {
+                start: Position {
+                    line: 1,
+                    column: 4,
+                    utf8_index: 3,
+                    utf16_index: 3,
+                },
+                end: Position {
+                    line: 1,
+                    column: 10,
+                    utf8_index: 9,
+                    utf16_index: 9,
+                },
+            },
+        }]
+    );
+}
+
+#[test]
+fn token_number_with_spaces() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(" 31156 ", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[Token {
+            token_type: TokenType::Number,
+            content: "31156".to_owned(),
+            span: Span {
+                start: Position {
+                    line: 1,
+                    column: 2,
+                    utf8_index: 1,
+                    utf16_index: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 7,
+                    utf8_index: 6,
+                    utf16_index: 6,
+                },
+            },
+        }]
+    );
+}
+
+#[test]
+fn token_equal_with_spaces() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens("  =  ", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[Token {
+            token_type: TokenType::Equal,
+            content: "=".to_owned(),
+            span: Span {
+                start: Position {
+                    line: 1,
+                    column: 3,
+                    utf8_index: 2,
+                    utf16_index: 2,
+                },
+                end: Position {
+                    line: 1,
+                    column: 4,
+                    utf8_index: 3,
+                    utf16_index: 3,
+                },
+            },
+        }]
+    );
+}
+
+#[test]
+fn token_let_with_spaces() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens("  let ", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[Token {
+            token_type: TokenType::Let,
+            content: "let".to_owned(),
+            span: Span {
+                start: Position {
+                    line: 1,
+                    column: 3,
+                    utf8_index: 2,
+                    utf16_index: 2,
+                },
+                end: Position {
+                    line: 1,
+                    column: 6,
+                    utf8_index: 5,
+                    utf16_index: 5,
+                },
+            },
+        }]
+    );
+}
+
+#[test]
+fn token_in_with_spaces() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(" in   ", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[Token {
+            token_type: TokenType::In,
+            content: "in".to_owned(),
+            span: Span {
+                start: Position {
+                    line: 1,
+                    column: 2,
+                    utf8_index: 1,
+                    utf16_index: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 4,
+                    utf8_index: 3,
+                    utf16_index: 3,
+                },
+            },
+        }]
+    );
+}
+
+#[test]
+fn token_dot_with_spaces() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(" .   ", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[Token {
+            token_type: TokenType::Dot,
+            content: ".".to_owned(),
+            span: Span {
+                start: Position {
+                    line: 1,
+                    column: 2,
+                    utf8_index: 1,
+                    utf16_index: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 3,
+                    utf8_index: 2,
+                    utf16_index: 2,
+                },
+            },
+        }]
+    );
+}
+
+#[test]
+fn token_open_paren_with_spaces() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(" ( ", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[Token {
+            token_type: TokenType::OpenParen,
+            content: "(".to_owned(),
+            span: Span {
+                start: Position {
+                    line: 1,
+                    column: 2,
+                    utf8_index: 1,
+                    utf16_index: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 3,
+                    utf8_index: 2,
+                    utf16_index: 2,
+                },
+            },
+        }]
+    );
+}
+
+#[test]
+fn token_close_paren_with_spaces() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens("   )  ", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[Token {
+            token_type: TokenType::CloseParen,
+            content: ")".to_owned(),
+            span: Span {
+                start: Position {
+                    line: 1,
+                    column: 4,
+                    utf8_index: 3,
+                    utf16_index: 3,
+                },
+                end: Position {
+                    line: 1,
+                    column: 5,
+                    utf8_index: 4,
+                    utf16_index: 4,
+                },
+            },
+        }]
+    );
+}
+
+#[test]
+fn token_semicolon_with_spaces() {
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens("  ;   ", &mut diagnostics);
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        tokens,
+        &[
+            Token {
+                token_type: TokenType::Semicolon,
+                content: ";".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 3,
+                        utf8_index: 2,
+                        utf16_index: 2,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 4,
+                        utf8_index: 3,
+                        utf16_index: 3,
+                    },
+                }
+            }
+        ]
+    )
+}
+
+#[test]
 fn code_without_keywords() {
     let mut diagnostics = Diagnostics::new();
     let tokens = generate_tokens(" \\a b. a ", &mut diagnostics);
@@ -864,57 +1175,21 @@ fn many_errors() {
 #[test]
 fn tokens_together() {
     let mut diagnostics = Diagnostics::new();
-    let code = "\\x.x";
+    let code = "let;in\\a=my_y.39(my_x)";
     let tokens = generate_tokens(code, &mut diagnostics);
     assert!(diagnostics.is_ok());
     assert_eq!(
         tokens, 
         &[
             Token {
-                token_type: TokenType::Lambda,
-                content: "\\".to_owned(),
+                token_type: TokenType::Let,
+                content: "let".to_owned(),
                 span: Span {
                     start: Position {
                         line: 1,
                         column: 1,
                         utf8_index: 0,
                         utf16_index: 0,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 2,
-                        utf8_index: 1,
-                        utf16_index: 1,
-                    },
-                },
-            },
-            Token {
-                token_type: TokenType::Identifier,
-                content: "x".to_owned(),
-                span: Span {
-                    start: Position {
-                        line: 1,
-                        column: 2,
-                        utf8_index: 1,
-                        utf16_index: 1,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 3,
-                        utf8_index: 2,
-                        utf16_index: 2,
-                    },
-                },
-            },
-            Token {
-                token_type: TokenType::Dot,
-                content: ".".to_owned(),
-                span: Span {
-                    start: Position {
-                        line: 1,
-                        column: 3,
-                        utf8_index: 2,
-                        utf16_index: 2,
                     },
                     end: Position {
                         line: 1,
@@ -925,8 +1200,8 @@ fn tokens_together() {
                 },
             },
             Token {
-                token_type: TokenType::Identifier,
-                content: "x".to_owned(),
+                token_type: TokenType::Semicolon,
+                content: ";".to_owned(),
                 span: Span {
                     start: Position {
                         line: 1,
@@ -941,6 +1216,187 @@ fn tokens_together() {
                         utf16_index: 4,
                     },
                 },
-            }            
+            },
+            Token {
+                token_type: TokenType::In,
+                content: "in".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 5,
+                        utf8_index: 4,
+                        utf16_index: 4,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 7,
+                        utf8_index: 6,
+                        utf16_index: 6,
+                    },
+                },
+            },
+            Token {
+                token_type: TokenType::Lambda,
+                content: "\\".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 7,
+                        utf8_index: 6,
+                        utf16_index: 6,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 8,
+                        utf8_index: 7,
+                        utf16_index: 7,
+                    },
+                },
+            },
+            Token {
+                token_type: TokenType::Identifier,
+                content: "a".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 8,
+                        utf8_index: 7,
+                        utf16_index: 7,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 9,
+                        utf8_index: 8,
+                        utf16_index: 8,
+                    },
+                },
+            },
+            Token {
+                token_type: TokenType::Equal,
+                content: "=".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 9,
+                        utf8_index: 8,
+                        utf16_index: 8,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 10,
+                        utf8_index: 9,
+                        utf16_index: 9,
+                    },
+                },
+            },
+            Token {
+                token_type: TokenType::Identifier,
+                content: "my_y".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 10,
+                        utf8_index: 9,
+                        utf16_index: 9,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 14,
+                        utf8_index: 13,
+                        utf16_index: 13,
+                    },
+                },
+            },
+            Token {
+                token_type: TokenType::Dot,
+                content: ".".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 14,
+                        utf8_index: 13,
+                        utf16_index: 13,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 15,
+                        utf8_index: 14,
+                        utf16_index: 14,
+                    },
+                },
+            },
+            Token {
+                token_type: TokenType::Number,
+                content: "39".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 15,
+                        utf8_index: 14,
+                        utf16_index: 14,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 17,
+                        utf8_index: 16,
+                        utf16_index: 16,
+                    },
+                },
+            }, 
+            Token {
+                token_type: TokenType::OpenParen,
+                content: "(".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 17,
+                        utf8_index: 16,
+                        utf16_index: 16,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 18,
+                        utf8_index: 17,
+                        utf16_index: 17,
+                    },
+                },
+            },
+            Token {
+                token_type: TokenType::Identifier,
+                content: "my_x".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 18,
+                        utf8_index: 17,
+                        utf16_index: 17,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 22,
+                        utf8_index: 21,
+                        utf16_index: 21,
+                    },
+                },
+            },
+            Token {
+                token_type: TokenType::CloseParen,
+                content: ")".to_owned(),
+                span: Span {
+                    start: Position {
+                        line: 1,
+                        column: 22,
+                        utf8_index: 21,
+                        utf16_index: 21,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 23,
+                        utf8_index: 22,
+                        utf16_index: 22,
+                    },
+                },
+            },
         ]);
 }
+

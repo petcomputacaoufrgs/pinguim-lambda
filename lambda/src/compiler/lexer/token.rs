@@ -13,6 +13,7 @@ pub enum TokenType {
     Dot,
     OpenParen,
     CloseParen,
+    Semicolon
 }
 
 impl fmt::Display for TokenType {
@@ -29,6 +30,7 @@ impl fmt::Display for TokenType {
             TokenType::Dot => write!(formatter, "."),
             TokenType::OpenParen => write!(formatter, "("),
             TokenType::CloseParen => write!(formatter, ")"),
+            TokenType::Semicolon => write!(formatter, ";"),
         }
     }
 }
