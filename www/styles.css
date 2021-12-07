@@ -77,7 +77,7 @@
 
 .drawing-redex-app-bg {
     fill: var(--redex-drawing-background);
-    stroke: var(--redex-drawing-border);
+    stroke: var(--redex-drawing-redex-border);
 }
 
 .drawing-variable-text {

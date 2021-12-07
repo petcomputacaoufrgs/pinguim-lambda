@@ -12,7 +12,7 @@
     --full-drawing-background: #282828;
     --default-drawing-background: #40403d;
     --redex-drawing-background: #40403d;
-    --redex-drawing-border: #F84B3C;
+    --redex-drawing-redex-border: #6E95E9;
 
     /* Colors */
     --header-font-color: #EBEBE3;
@@ -30,11 +30,11 @@
     --highlight-color: #D2C656;
 
     /* Drawing Text */
-    --drawing-lambda-color: #F9BC41;
-    --drawing-variable-color: #8FBF7F;
-    --drawing-non-redex-at-color: #D2C656;
-    --drawing-redex-at-color: #F84B3C;
-    --drawing-line-color: #EBEBE3;
+    --drawing-lambda-color: #6DDA8C;
+    --drawing-variable-color: #EAF241;
+    --drawing-non-redex-at-color: #F29D52;
+    --drawing-redex-at-color: #F76A6A;
+    --drawing-line-color: #B2B2AF;
 
     /* General colors */
     --dark-color: #121212;
