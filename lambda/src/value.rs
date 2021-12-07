@@ -313,9 +313,15 @@ impl Value {
 
 impl Clone for Value {
     fn clone(&self) -> Self {
+        /// Uma operação auxiliar de clonagem.
         enum Operation<'value> {
+            /// Inicia a clonagem de um termo qualquer.
             Clone(&'value Value),
+
+            /// Finaliza a clonagem de um termo lambda.
             MakeLambda(String),
+
+            /// Finaliza a clonagem de um termo aplicação.
             MakeApplication,
         }
 
@@ -339,6 +345,7 @@ impl Clone for Value {
                         operation_stack.push(Operation::Clone(body));
                     }
                 },
+
                 Operation::MakeLambda(parameter) => {
                     let body = output_stack.pop().expect("clone value body");
                     output_stack.push(Value::Lambda {
@@ -346,6 +353,7 @@ impl Clone for Value {
                         body: NestedValue::new(body),
                     });
                 }
+
                 Operation::MakeApplication => {
                     let argument =
                         output_stack.pop().expect("clone value argument");
@@ -363,28 +371,38 @@ impl Clone for Value {
     }
 }
 
+/// Um termo aninhado de cálculo lambda com ponteiro indireto para o termo contido.
+/// Implementação de drop não é recursiva.
+/// Derreferencia para o termo contido automáticamente.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NestedValue {
+    /// O termo contido em uma expressão aninhada.
     inner: Box<Value>,
 }
 
 impl NestedValue {
+    /// Cria um termo aninhado a partir de um termo.
     pub fn new(value: Value) -> Self {
         Self { inner: Box::new(value) }
     }
 
+    /// Explícitamente obtém uma referência para o termo contido.
     pub fn as_value(&self) -> &Value {
         &self.inner
     }
 
+    /// Explícitamente obtém uma referência mutável para o termo contido.
     pub fn as_mut_value(&mut self) -> &mut Value {
         &mut self.inner
     }
 
+    /// Converte o termo aninhado para termo contido.
     pub fn into_value(mut self) -> Value {
         self.take_value()
     }
 
+    /// Toma o termo contido, substituindo-o por um termo qualquer.
+    /// Não chamar diretamente.
     fn take_value(&mut self) -> Value {
         mem::replace(&mut self.inner, Value::Variable(String::new()))
     }
