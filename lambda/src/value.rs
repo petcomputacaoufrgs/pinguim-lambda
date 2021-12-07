@@ -52,7 +52,7 @@ use std::ops::{Deref, DerefMut};
 ///
 /// reduced = `a (λy. y)`
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Value {
     /// Uma variável.
     ///
@@ -308,6 +308,58 @@ impl Value {
                 }
             }
         }
+    }
+}
+
+impl Clone for Value {
+    fn clone(&self) -> Self {
+        enum Operation<'value> {
+            Clone(&'value Value),
+            MakeLambda(String),
+            MakeApplication,
+        }
+
+        let mut operation_stack = vec![Operation::Clone(self)];
+        let mut output_stack = Vec::new();
+
+        while let Some(operation) = operation_stack.pop() {
+            match operation {
+                Operation::Clone(value) => match value {
+                    Value::Variable(variable) => {
+                        output_stack.push(Value::Variable(variable.clone()));
+                    }
+                    Value::Application { function, argument } => {
+                        operation_stack.push(Operation::MakeApplication);
+                        operation_stack.push(Operation::Clone(argument));
+                        operation_stack.push(Operation::Clone(function));
+                    }
+                    Value::Lambda { parameter, body } => {
+                        operation_stack
+                            .push(Operation::MakeLambda(parameter.clone()));
+                        operation_stack.push(Operation::Clone(body));
+                    }
+                },
+                Operation::MakeLambda(parameter) => {
+                    let body = output_stack.pop().expect("clone value body");
+                    output_stack.push(Value::Lambda {
+                        parameter,
+                        body: NestedValue::new(body),
+                    });
+                }
+                Operation::MakeApplication => {
+                    let argument =
+                        output_stack.pop().expect("clone value argument");
+                    let function =
+                        output_stack.pop().expect("clone value function");
+
+                    output_stack.push(Value::Application {
+                        function: NestedValue::new(function),
+                        argument: NestedValue::new(argument),
+                    });
+                }
+            }
+        }
+        output_stack.pop().expect("clone value")
     }
 }
 
