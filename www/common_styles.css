@@ -11,8 +11,9 @@
     /* Drawing Backgrounds */
     --full-drawing-background: #282828;
     --default-drawing-background: #40403d;
+    --default-drawing-border: transparent;
     --redex-drawing-background: #40403d;
-    --redex-drawing-redex-border: #6E95E9;
+    --redex-drawing-border: #6E95E9;
 
     /* Colors */
     --header-font-color: #EBEBE3;
@@ -31,10 +32,14 @@
 
     /* Drawing Text */
     --drawing-lambda-color: #6DDA8C;
-    --drawing-variable-color: #EAF241;
+    --drawing-variable-color: #E2F985;
     --drawing-non-redex-at-color: #F29D52;
     --drawing-redex-at-color: #F76A6A;
     --drawing-line-color: #B2B2AF;
+    --drawing-lambda-weight: normal;
+    --drawing-variable-weight: normal;
+    --drawing-non-redex-weight: bold;
+    --drawing-redex-weight: bold;
 
     /* General colors */
     --dark-color: #121212;
@@ -50,9 +55,10 @@
 
     /* Drawing Backgrounds */
     --full-drawing-background: #FBF2D1;
-    --default-drawing-background: #F3EAE4;
-    --redex-drawing-background: #F3EAE4;
-    --redex-drawing-border: #9B0511;
+    --default-drawing-background: #FAF5F1;
+    --default-drawing-border: #B9A1D8;
+    --redex-drawing-background: #EDF2FC;
+    --redex-drawing-border: #6E95E9;
 
     /* Colors */
     --header-font-color: #F5F5F5;
@@ -70,11 +76,15 @@
     --highlight-color: #B9A1D8;
 
     /* Drawing Text */
-    --drawing-lambda-color: #B47523;
-    --drawing-variable-color: #447A59;
-    --drawing-non-redex-at-color: #67B6B6;
-    --drawing-redex-at-color: #9B0511;
-    --drawing-line-color: #67B6B6;
+    --drawing-lambda-color: #39B55C;
+    --drawing-variable-color: #A3AFDA;
+    --drawing-non-redex-at-color: #E8991A;
+    --drawing-redex-at-color: #CB1111;
+    --drawing-line-color: #B9A1D8;
+    --drawing-lambda-weight: normal;
+    --drawing-variable-weight: bold;
+    --drawing-non-redex-weight: bold;
+    --drawing-redex-weight: bold;
 }
 
 

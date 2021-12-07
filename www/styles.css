@@ -73,29 +73,32 @@
 
 .drawing-variable-bg, .drawing-lambda-bg, .drawing-non-redex-app-bg {
     fill: var(--default-drawing-background);
+    stroke: var(--default-drawing-border);
 }
 
 .drawing-redex-app-bg {
     fill: var(--redex-drawing-background);
-    stroke: var(--redex-drawing-redex-border);
+    stroke: var(--redex-drawing-border);
 }
 
 .drawing-variable-text {
     fill: var(--drawing-variable-color);
+    font-weight: var(--drawing-variable-weight);
 }
 
 .drawing-lambda-text {
     fill: var(--drawing-lambda-color);
+    font-weight: var(--drawing-lambda-weight);
 }
 
 .drawing-non-redex-app-text {
     fill: var(--drawing-non-redex-at-color);
-    font-weight: bold;
+    font-weight: var(--drawing-non-redex-weight);
 }
 
 .drawing-redex-app-text {
     fill: var(--drawing-redex-at-color);
-    font-weight: bold;
+    font-weight: var(--drawing-redex-weight);
 }
 
 .drawing-lambda-line, .drawing-redex-app-line, .drawing-non-redex-app-line {
