@@ -84,35 +84,85 @@ class Highlighter {
         this.types = types;
 
         const alternatives = types.map(type => '(' + type.regex.source + ')');
-        const flags = types.reduce((flags, type) => {
-            for (const flag of type.regex.flags) {
-                if (flags.indexOf(flag) < 0) {
-                    flags += flag;
+        const flags = types.reduce(
+            (flags, type) => {
+                for (const flag of type.regex.flags) {
+                    if (flags.indexOf(flag) < 0) {
+                        flags += flag;
+                    }
                 }
-            }
-            return flags;
-        }, '');
+                return flags;
+            },
+            ''
+        );
 
         this.splitRegex = new RegExp(alternatives.join('|'), flags);
     }
 
-    highlight(baseText, targetElement) {
+    highlight(inputElement, targetElement) {
+        let brackets = {};
+        const baseText = inputElement.value;
+
+
         targetElement.innerHTML = '';
 
+        let index = 0;
         for (let piece of baseText.split(this.splitRegex)) {
             piece = piece || "";
 
             const type = this.types.find(type => type.regex.test(piece));
 
             let child;
-            if (type !== undefined) {
+            if (type === undefined) {
+                child = document.createTextNode(piece);
+            } else {
                 child = document.createElement('span');
                 child.setAttribute('class', type.className);
                 child.textContent = piece;
-            } else {
-                child = document.createTextNode(piece);
+
+                if (type.bracket !== undefined) {
+                    let isSelected = (
+                        inputElement.selectionStart == index
+                        && inputElement.selectionEnd <= index + piece.length
+                    );
+                    const name = type.bracket.name;
+                    brackets[name] = brackets[name] || [];
+
+                    switch (type.bracket.direction) {
+                        case 'opening': {
+                            brackets[name].push({
+                                node: child,
+                                selected: isSelected,
+                            });
+                            break;
+                        }
+                        case 'closing': {
+                            const previous = brackets[name].pop();
+                            if (
+                                previous !== undefined
+                                && (previous.selected || isSelected)
+                            ) {
+                                let cls = child.getAttribute('class');
+                                child.setAttribute(
+                                    'class',
+                                    cls + ' selected-bracket',
+                                );
+
+                                cls = previous.node.getAttribute('class');
+                                previous.node.setAttribute(
+                                    'class',
+                                    cls + ' selected-bracket'
+                                );
+                            }
+
+                            break;
+                        }
+                    }
+                }
             }
             targetElement.appendChild(child);
+
+            index += piece.length;
         }
     }
 }
@@ -120,14 +170,23 @@ class Highlighter {
 const highlighter = new Highlighter(
     { className: 'comment', regex: /--.*\n/ },
     { className: 'reserved', regex: /\blet\b|\bin\b/ },
-    { className: 'punctuation', regex: /\\|\.|=|;|\(|\)/ },
     { className: 'number', regex: /\b[0-9]+\b/ },
+    { className: 'punctuation', regex: /\\|\.|=|;/ },
+    {
+        className: 'punctuation',
+        bracket: { name: 'parens', direction: 'opening' },
+        regex: /\(/,
+    },
+    {
+        className: 'punctuation',
+        bracket: { name: 'parens', direction: 'closing' },
+        regex: /\)/,
+    },
 );
 
 const highlight = () => {
-    const baseText = textAreaHTML.value;
-    highlighter.highlight(baseText, codeAreaHTML);
-    setStorage(baseText);
+    highlighter.highlight(textAreaHTML, codeAreaHTML);
+    setStorage(textAreaHTML.value);
 };
 
 const handleKeys = {
@@ -139,6 +198,8 @@ const handleKeys = {
 };
 
 textAreaHTML.addEventListener('keyup', (evt) => highlight());
+
+textAreaHTML.addEventListener('click', evt => highlight());
 
 textAreaHTML.addEventListener('keydown', (e) => {
      try { handleKeys[e.key](e) }

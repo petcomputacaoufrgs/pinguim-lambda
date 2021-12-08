@@ -250,6 +250,11 @@ input:checked + .slider > span {
     z-index: 0;
 }
 
+.selected-bracket {
+    text-decoration: underline;
+    font-weight: bold;
+}
+
 .punctuation {
     color: var(--code-punctuation);
 }
