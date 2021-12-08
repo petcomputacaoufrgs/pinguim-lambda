@@ -41,7 +41,16 @@
 
 		<div class="flex-box">
 			<div class="coding-area">
-				<textarea class="code-textarea"></textarea>
+                <div class="coding-input">
+                    <!-- Original code -->
+                    <div class="front">
+                        <textarea id="userinput" class="code-textarea" spellcheck="false"></textarea>
+                    </div>
+                    <!-- Highlighted code -->
+                    <div class="behind">
+                        <pre id="codeediting" class="highlighting"><code id="codeholder" class="code-highlight"></code></pre>
+                    </div>
+                </div>
 				<div class="log-and-execution-area">
 					<div class="log-area">
 						<h2>Log</h2>

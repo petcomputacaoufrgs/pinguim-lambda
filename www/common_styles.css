@@ -24,8 +24,8 @@
     --textarea-scrollbar: #4A4A48;
     --code-font-color: rgba(0, 0, 0, 0);
     --code-reserved-words: #F84B3C;
-    --code-built-in-funcs: #F9BC41;
-    --code-label-color: #8FBF7F;
+    --code-punctuation: #8FBF7F;
+    --code-numbers: #F9BC41;
     --code-background-color: #282828;
     --error-font-color: #FF7676;
     --highlight-color: #D2C656;
@@ -69,8 +69,8 @@
     --textarea-scrollbar: #EAD0B7;
     --code-font-color: rgba(0, 0, 0, 0);
     --code-reserved-words: #9B0511;
-    --code-built-in-funcs: #B47523;
-    --code-label-color: #447A59;
+    --code-punctuation: #B47523;
+    --code-numbers: #447A59;
     --code-background-color: #FBF2D1;
     --error-font-color: #FF5977;
     --highlight-color: #B9A1D8;
@@ -241,23 +241,23 @@ input:checked + .slider > span {
 
 .behind {
     position: absolute;
-    margin: 0 2vw;
+    margin: 0 0;
     padding: 10px;
     background-clip: padding-box;
     background-color: var(--code-background-color);
     z-index: 0;
 }
 
-.label {
-    color: var(--code-label-color);
+.punctuation {
+    color: var(--code-punctuation);
 }
 
 .reserved {
     color: var(--code-reserved-words);
 }
 
-.builtin {
-    color: var(--code-built-in-funcs);
+.number {
+    color: var(--code-numbers);
 }
 
 /* LOG AND EXECUTION AREA */

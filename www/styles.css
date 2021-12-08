@@ -108,3 +108,13 @@
 .drawing-redex-app-text, .drawing-redex-app-bg {
     cursor: pointer;
 }
+
+/* TEXTAREA FOR CODE */
+.code-textarea {
+    margin: 0 0;
+    background: transparent;
+}
+
+.coding-input {
+    display: flex;
+}

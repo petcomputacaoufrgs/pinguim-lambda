@@ -66,3 +66,14 @@ export const init = (() => {
         }
     };
 })();
+
+const storageKey = "pinguim.lambda.userCode";
+
+// Local Storage
+export const setStorage = (baseText) => {
+    localStorage.setItem(storageKey, baseText);
+};
+
+export const getStorage = () => {
+    return localStorage.getItem(storageKey);
+};
