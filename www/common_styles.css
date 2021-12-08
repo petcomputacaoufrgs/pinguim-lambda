@@ -70,10 +70,10 @@
     --textarea-scrollbar: #EAD0B7;
     --code-font-color: rgba(0, 0, 0, 0);
     --code-reserved-words: #9B0511;
-    --code-punctuation: #B47523;
-    --code-numbers: #447A59;
+    --code-punctuation: #447A59;
+    --code-numbers: #B47523;
     --code-background-color: #FBF2D1;
-    --code-comment-color: #505050;
+    --code-comment-color: #585858;
     --error-font-color: #FF5977;
     --highlight-color: #B9A1D8;
 
