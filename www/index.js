@@ -118,6 +118,7 @@ class Highlighter {
 }
 
 const highlighter = new Highlighter(
+    { className: 'comment', regex: /--.*\n/ },
     { className: 'reserved', regex: /\blet\b|\bin\b/ },
     { className: 'punctuation', regex: /\\|\.|=|;|\(|\)/ },
     { className: 'number', regex: /\b[0-9]+\b/ },

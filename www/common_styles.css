@@ -27,6 +27,7 @@
     --code-punctuation: #8FBF7F;
     --code-numbers: #F9BC41;
     --code-background-color: #282828;
+    --code-comment-color: #a0a0a0;
     --error-font-color: #FF7676;
     --highlight-color: #D2C656;
 
@@ -72,6 +73,7 @@
     --code-punctuation: #B47523;
     --code-numbers: #447A59;
     --code-background-color: #FBF2D1;
+    --code-comment-color: #707070;
     --error-font-color: #FF5977;
     --highlight-color: #B9A1D8;
 
@@ -258,6 +260,10 @@ input:checked + .slider > span {
 
 .number {
     color: var(--code-numbers);
+}
+
+.comment {
+    color: var(--code-comment-color);
 }
 
 /* LOG AND EXECUTION AREA */
