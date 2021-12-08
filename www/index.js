@@ -100,13 +100,12 @@ class Highlighter {
     }
 
     highlight(inputElement, targetElement) {
-        let brackets = {};
         const baseText = inputElement.value;
-
+        const brackets = {};
+        let index = 0;
 
         targetElement.innerHTML = '';
 
-        let index = 0;
         for (let piece of baseText.split(this.splitRegex)) {
             piece = piece || "";
 
@@ -121,48 +120,48 @@ class Highlighter {
                 child.textContent = piece;
 
                 if (type.bracket !== undefined) {
-                    let isSelected = (
-                        inputElement.selectionStart == index
-                        && inputElement.selectionEnd <= index + piece.length
+                    this.handleBracket(
+                        inputElement,
+                        piece,
+                        type,
+                        brackets,
+                        index,
+                        child,
                     );
-                    const name = type.bracket.name;
-                    brackets[name] = brackets[name] || [];
-
-                    switch (type.bracket.direction) {
-                        case 'opening': {
-                            brackets[name].push({
-                                node: child,
-                                selected: isSelected,
-                            });
-                            break;
-                        }
-                        case 'closing': {
-                            const previous = brackets[name].pop();
-                            if (
-                                previous !== undefined
-                                && (previous.selected || isSelected)
-                            ) {
-                                let cls = child.getAttribute('class');
-                                child.setAttribute(
-                                    'class',
-                                    cls + ' selected-bracket',
-                                );
-
-                                cls = previous.node.getAttribute('class');
-                                previous.node.setAttribute(
-                                    'class',
-                                    cls + ' selected-bracket'
-                                );
-                            }
-
-                            break;
-                        }
-                    }
                 }
             }
-            targetElement.appendChild(child);
 
+            targetElement.appendChild(child);
             index += piece.length;
+        }
+
+    }
+
+    handleBracket(inputElement, piece, type, brackets, index, child) {
+        let isSelected = (
+            inputElement.selectionStart == index
+            && inputElement.selectionEnd <= index + piece.length
+        );
+        const name = type.bracket.name;
+        brackets[name] = brackets[name] || [];
+
+        switch (type.bracket.direction) {
+            case 'opening': {
+                brackets[name].push({ node: child, selected: isSelected });
+                break;
+            }
+            case 'closing': {
+                const prev = brackets[name].pop();
+                if (prev !== undefined && (prev.selected || isSelected)) {
+                    let cls = child.getAttribute('class');
+                    child.setAttribute('class', cls + ' selected-bracket');
+
+                    cls = prev.node.getAttribute('class');
+                    prev.node.setAttribute( 'class', cls + ' selected-bracket');
+                }
+
+                break;
+            }
         }
     }
 }
