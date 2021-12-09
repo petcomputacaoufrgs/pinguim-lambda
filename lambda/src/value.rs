@@ -77,6 +77,10 @@ pub enum Value {
 }
 
 impl Value {
+    fn dummy() -> Self {
+        Value::Variable(String::new())
+    }
+
     /// Retorna a codificação de church do dado número natural.
     pub fn church_numeral(number: u64) -> Self {
         let mut body = Value::Variable(String::from("x"));
@@ -252,26 +256,40 @@ impl Value {
 
     /// Faz a redução de um único redex, mais externo, mais à esquerda. Retorna se tal redex foi encontrado.
     pub fn reduce_one(&mut self) -> bool {
-        match self {
-            Value::Variable(_) => false,
+        let mut candidate_stack = vec![self];
+        let mut redex_found = false;
 
-            Value::Application { function, argument } => {
+        while let Some(candidate) =
+            candidate_stack.pop().filter(|_| !redex_found)
+        {
+            let mut value = mem::replace(candidate, Value::dummy());
+            if let Value::Application { function, argument } = &mut value {
                 if let Value::Lambda { parameter, body } =
                     function.as_mut_value()
                 {
                     body.replace(parameter, argument);
-                    *self = mem::replace(
-                        body.as_mut_value(),
-                        Value::Variable(String::new()),
-                    );
-                    true
-                } else {
-                    function.reduce_one() || argument.reduce_one()
+                    *candidate =
+                        mem::replace(body.as_mut_value(), Value::dummy());
+                    redex_found = true;
                 }
             }
 
-            Value::Lambda { parameter: _, body } => body.reduce_one(),
+            if !redex_found {
+                *candidate = value;
+                match candidate {
+                    Value::Variable(_) => (),
+                    Value::Application { function, argument } => {
+                        candidate_stack.push(argument);
+                        candidate_stack.push(function);
+                    }
+                    Value::Lambda { parameter: _, body } => {
+                        candidate_stack.push(body);
+                    }
+                }
+            }
         }
+
+        redex_found
     }
 
     /// Retorna o conjunto das varíaveis não ligadas nesse termo.
@@ -413,7 +431,7 @@ impl NestedValue {
     /// Toma o termo contido, substituindo-o por um termo qualquer.
     /// Não chamar diretamente.
     fn take_value(&mut self) -> Value {
-        mem::replace(&mut self.inner, Value::Variable(String::new()))
+        mem::replace(&mut self.inner, Value::dummy())
     }
 }
 
