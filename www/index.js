@@ -186,6 +186,7 @@ const highlighter = new Highlighter(
 const highlight = () => {
     highlighter.highlight(textAreaHTML, codeAreaHTML);
     setStorage(textAreaHTML.value);
+    syncScroll();
 };
 
 const handleKeys = {
@@ -205,12 +206,14 @@ textAreaHTML.addEventListener('keydown', (e) => {
      catch(e) {}
 });
 
-textAreaHTML.addEventListener('scroll', (e) => handleScroll());
+textAreaHTML.addEventListener('scroll', (e) => syncScroll());
 
-const handleScroll = () => {
+textAreaHTML.addEventListener('input', (e) => syncScroll());
+
+const syncScroll = () => {
     preAreaHTML.scrollTop = textAreaHTML.scrollTop;
     preAreaHTML.scrollLeft = textAreaHTML.scrollLeft;
-}
+};
 
 const handleTab = (e) => {
     e.preventDefault();

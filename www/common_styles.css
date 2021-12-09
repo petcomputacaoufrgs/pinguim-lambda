@@ -233,7 +233,8 @@ input:checked + .slider > span {
     margin: 0;
     white-space: pre-wrap; 
     word-wrap: break-word;
-    overflow: hidden;
+    overflow-x: auto;
+    padding: 10px;
 }
 
 .front {
@@ -244,7 +245,6 @@ input:checked + .slider > span {
 .behind {
     position: absolute;
     margin: 0 0;
-    padding: 10px;
     background-clip: padding-box;
     background-color: var(--code-background-color);
     z-index: 0;
