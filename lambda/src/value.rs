@@ -276,38 +276,44 @@ impl Value {
 
     /// Retorna o conjunto das varíaveis não ligadas nesse termo.
     pub fn unbound_vars(&self) -> HashSet<&str> {
-        let mut unbound_set = HashSet::new();
-        let mut bound_set = HashSet::new();
+        enum Operation<'value> {
+            Visit(&'value Value),
+            RemoveBound(&'value str),
+        }
 
-        self.unbound_vars_at(&mut unbound_set, &mut bound_set);
-        unbound_set
-    }
+        let mut operation_stack = vec![Operation::Visit(self)];
+        let mut unbound_set = HashSet::<&str>::new();
+        let mut bound_set = HashSet::<&str>::new();
 
-    /// Detalhe de implementação da construção do conjunto de variáveis não ligadas.
-    /// Realiza a construção recursivamente, utilizando estruturas auxiliares já inicializadas.
-    fn unbound_vars_at<'value>(
-        &'value self,
-        unbound_set: &mut HashSet<&'value str>,
-        bound_set: &mut HashSet<&'value str>,
-    ) {
-        match self {
-            Value::Variable(variable) => {
-                if !bound_set.contains(variable.as_str()) {
-                    unbound_set.insert(variable);
-                }
-            }
-            Value::Application { function, argument } => {
-                function.unbound_vars_at(unbound_set, bound_set);
-                argument.unbound_vars_at(unbound_set, bound_set);
-            }
-            Value::Lambda { parameter, body } => {
-                let was_inserted = bound_set.insert(parameter);
-                body.unbound_vars_at(unbound_set, bound_set);
-                if was_inserted {
-                    bound_set.remove(parameter.as_str());
+        while let Some(operation) = operation_stack.pop() {
+            match operation {
+                Operation::Visit(value) => match value {
+                    Value::Variable(variable) => {
+                        if !bound_set.contains(variable.as_str()) {
+                            unbound_set.insert(variable);
+                        }
+                    }
+                    Value::Application { function, argument } => {
+                        operation_stack.push(Operation::Visit(function));
+                        operation_stack.push(Operation::Visit(argument));
+                    }
+                    Value::Lambda { parameter, body } => {
+                        let was_inserted = bound_set.insert(parameter);
+                        if was_inserted {
+                            operation_stack
+                                .push(Operation::RemoveBound(parameter));
+                        }
+                        operation_stack.push(Operation::Visit(body));
+                    }
+                },
+
+                Operation::RemoveBound(parameter) => {
+                    bound_set.remove(parameter);
                 }
             }
         }
+
+        unbound_set
     }
 }
 
