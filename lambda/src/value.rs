@@ -276,8 +276,11 @@ impl Value {
 
     /// Retorna o conjunto das varíaveis não ligadas nesse termo.
     pub fn unbound_vars(&self) -> HashSet<&str> {
+        /// Um passo para calcular o conjunto das variáveis livres.
         enum Operation<'value> {
+            /// Visita um termo para coletar suas variáveis livres.
             Visit(&'value Value),
+            /// Remove uma variável do conjunto das variáveis ligadas.
             RemoveBound(&'value str),
         }
 
