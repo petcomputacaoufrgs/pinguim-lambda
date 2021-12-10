@@ -14,7 +14,7 @@ use std::ops::{Deref, DerefMut};
 /// <=>
 /// `λa. (λb. (λc. (a b) c))`
 /// <=>
-/// ```ignore
+/// ```text
 /// Lambda {
 ///     parameter: "a",
 ///     body: Lambda {
@@ -35,7 +35,7 @@ use std::ops::{Deref, DerefMut};
 ///
 /// `(λx. a x) (λy. y)`
 /// <=>
-/// ```ignore
+/// ```text
 /// Application {
 ///     function: Lambda {
 ///         parameter: "x",
@@ -173,11 +173,11 @@ impl Value {
     ///
     /// # Captura de variáveis.
     ///
-    /// ```ignore
+    /// ```text
     /// λa. (λx. λa. x a) a
     /// ```
     /// <=> substituir `x` por `a`
-    /// ```ignore
+    /// ```text
     /// λa. (λa. a a)
     /// ```
     ///
@@ -187,21 +187,21 @@ impl Value {
     /// interno.
     ///
     /// Solução mais básica? Trocar nome do parâmetro.
-    /// ```ignore
+    /// ```text
     /// λa. (λa_. a a_)
     /// ```
     ///
     /// No entanto, é preciso cuidar o seguinte:
-    /// ```ignore
+    /// ```text
     /// λa_. λa. (λx. λa. x a a_) a
     /// ```
     /// <=> substituir `x` por `a`
-    /// ```ignore
+    /// ```text
     /// λa_. λa. (λa_. a a_ a_) a
     /// ```
     ///
     /// Mas a resposta correta deve ser:
-    /// ```ignore
+    /// ```text
     /// λa_. λa. (λa__. a a__ a_) a
     /// ```
     ///
