@@ -262,8 +262,7 @@ impl Value {
         while let Some(candidate) =
             candidate_stack.pop().filter(|_| !redex_found)
         {
-            let mut value = mem::replace(candidate, Value::dummy());
-            if let Value::Application { function, argument } = &mut value {
+            if let Value::Application { function, argument } = candidate {
                 if let Value::Lambda { parameter, body } =
                     function.as_mut_value()
                 {
@@ -275,7 +274,6 @@ impl Value {
             }
 
             if !redex_found {
-                *candidate = value;
                 match candidate {
                     Value::Variable(_) => (),
                     Value::Application { function, argument } => {
