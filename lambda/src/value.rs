@@ -105,67 +105,99 @@ impl Value {
     pub fn beta_equiv(&self, other: &Value) -> bool {
         let mut self_indices = ParamIndices::default();
         let mut other_indices = ParamIndices::default();
-        self.beta_equiv_with(other, &mut self_indices, &mut other_indices)
-    }
 
-    /// Detalhe de implementação do teste de equivalência.
-    /// Testa a beta-equivalência recursivamente, usando estruturas auxiliares já inicializadas.
-    fn beta_equiv_with<'this, 'other>(
-        &'this self,
-        other: &'other Value,
-        self_indices: &mut ParamIndices<'this>,
-        other_indices: &mut ParamIndices<'other>,
-    ) -> bool {
-        match (self, other) {
-            (Value::Variable(self_var), Value::Variable(other_var)) => {
-                match (
-                    self_indices.get(self_var.as_str()),
-                    other_indices.get(other_var.as_str()),
-                ) {
-                    (Some(self_index), Some(other_index)) => {
-                        self_index == other_index
+        /// Uma operação/passo para computar a beta-equivalência de dois termos.
+        enum Operation<'this, 'other> {
+            /// Testa se dois valores são beta-equivalentes.
+            Compare(&'this Value, &'other Value),
+            /// Remove um parâmetro do mapeamento de indices de self. Restaurando um possível antigo valor.
+            PopSelfIndex(&'this str, Option<u64>),
+            /// Remove um parâmetro do mapeamento de indices de other. Restaurando um possível antigo valor.
+            PopOtherIndex(&'other str, Option<u64>),
+        }
+
+        let mut equals = true;
+        let mut operation_stack = vec![Operation::Compare(self, other)];
+
+        while let Some(operation) = operation_stack.pop().filter(|_| equals) {
+            match operation {
+                Operation::Compare(self_value, other_value) => {
+                    match (self_value, other_value) {
+                        (
+                            Value::Variable(self_var),
+                            Value::Variable(other_var),
+                        ) => {
+                            equals = match (
+                                self_indices.get(self_var.as_str()),
+                                other_indices.get(other_var.as_str()),
+                            ) {
+                                (Some(self_index), Some(other_index)) => {
+                                    self_index == other_index
+                                }
+                                (Some(_), None) | (None, Some(_)) => false,
+                                (None, None) => self_var == other_var,
+                            };
+                        }
+
+                        (
+                            Value::Application {
+                                function: self_func,
+                                argument: self_arg,
+                            },
+                            Value::Application {
+                                function: other_func,
+                                argument: other_arg,
+                            },
+                        ) => {
+                            operation_stack.push(Operation::Compare(
+                                self_func, other_func,
+                            ));
+                            operation_stack
+                                .push(Operation::Compare(self_arg, other_arg));
+                        }
+
+                        (
+                            Value::Lambda {
+                                parameter: self_param,
+                                body: self_body,
+                            },
+                            Value::Lambda {
+                                parameter: other_param,
+                                body: other_body,
+                            },
+                        ) => {
+                            let self_old_index = self_indices.push(self_param);
+                            let other_old_index =
+                                other_indices.push(other_param);
+
+                            operation_stack.push(Operation::PopSelfIndex(
+                                self_param,
+                                self_old_index,
+                            ));
+                            operation_stack.push(Operation::PopOtherIndex(
+                                other_param,
+                                other_old_index,
+                            ));
+
+                            operation_stack.push(Operation::Compare(
+                                self_body, other_body,
+                            ));
+                        }
+
+                        _ => equals = false,
                     }
-                    (Some(_), None) | (None, Some(_)) => false,
-                    (None, None) => self_var == other_var,
+                }
+
+                Operation::PopOtherIndex(param, old_index) => {
+                    other_indices.pop(param, old_index);
+                }
+                Operation::PopSelfIndex(param, old_index) => {
+                    self_indices.pop(param, old_index);
                 }
             }
-
-            (
-                Value::Application { function: self_func, argument: self_arg },
-                Value::Application {
-                    function: other_func,
-                    argument: other_arg,
-                },
-            ) => {
-                self_func.beta_equiv_with(
-                    other_func,
-                    self_indices,
-                    other_indices,
-                ) && self_arg.beta_equiv_with(
-                    other_arg,
-                    self_indices,
-                    other_indices,
-                )
-            }
-
-            (
-                Value::Lambda { parameter: self_param, body: self_body },
-                Value::Lambda { parameter: other_param, body: other_body },
-            ) => {
-                let self_old_index = self_indices.push(self_param);
-                let other_old_index = other_indices.push(other_param);
-                let body_is_beta_equiv = self_body.beta_equiv_with(
-                    other_body,
-                    self_indices,
-                    other_indices,
-                );
-                self_indices.pop(self_param, self_old_index);
-                other_indices.pop(other_param, other_old_index);
-                body_is_beta_equiv
-            }
-
-            _ => false,
         }
+
+        equals
     }
 
     /// Substitui todas as ocorrências da variável `target_var` pelo valor `new_value` dentro de `self`.
