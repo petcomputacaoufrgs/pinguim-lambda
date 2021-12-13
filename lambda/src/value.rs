@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod test;
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem;
@@ -240,8 +241,91 @@ impl Value {
     /// Solução mais básica? Aumentar o nome da variável com `_` até não haver
     /// variáveis livres.
     pub fn replace(&mut self, target_var: &str, new_value: &Self) {
-        let unbound_vars = new_value.unbound_vars();
-        self.replace_with(target_var, new_value, &unbound_vars);
+        /*
+        struct Replacement<'var, 'new_value> {
+            target_var: &'var str,
+            new_value: &'new_value Value,
+            unbound_vars: HashSet<&'new_value str>,
+        }
+
+        impl<'var, 'new_value> Replacement<'var, 'new_value> {
+            fn new(
+                target_var: &'var str,
+                new_value: &'new_value Value,
+            ) -> Self {
+                Self {
+                    target_var,
+                    new_value,
+                    unbound_vars: new_value.unbound_vars(),
+                }
+            }
+        }
+
+        enum Operation<'this> {
+            Replace(&'this mut Value),
+            DropReplacement,
+        }
+
+        let mut replacement = Replacement::new(target_var, new_value);
+        let mut replacement_stack = Vec::new();
+        let mut operation_stack = vec![Operation::Replace(self)];
+
+        while let Some(operation) = operation_stack.pop() {
+            match operation {
+                Operation::Replace(value) => match value {
+                    Value::Variable(variable) => {
+                        if variable == target_var {
+                            *value = new_value.clone();
+                        }
+                    }
+
+                    Value::Application { function, argument } => {
+                        operation_stack.push(Operation::Replace(function));
+                        operation_stack.push(Operation::Replace(argument));
+                    }
+
+                    Value::Lambda { parameter, body } => {
+                        if parameter != target_var {
+                            operation_stack.push(Operation::Replace(body));
+                            if replacement
+                                .unbound_vars
+                                .contains(parameter.as_str())
+                            {
+                                let body_unbound = body.unbound_vars();
+                                let mut renamed_var = format!("{}_", parameter);
+                                while replacement
+                                    .unbound_vars
+                                    .contains(renamed_var.as_str())
+                                    || body_unbound
+                                        .contains(renamed_var.as_str())
+                                {
+                                    renamed_var.push('_');
+                                }
+                                replacement_stack.push(mem::replace(
+                                    &mut replacement,
+                                    Replacement::new(
+                                        parameter.as_str(),
+                                        &Value::Variable(renamed_var.clone()),
+                                    ),
+                                ));
+                                operation_stack.push(Operation::RenameParam(
+                                    parameter,
+                                    renamed_var,
+                                ));
+                                operation_stack
+                                    .push(Operation::DropReplacement);
+                                operation_stack.push(Operation::Replace(body));
+                            }
+                        }
+                    }
+                },
+            }
+        }
+
+        todo!();
+        */
+        let unboud_vars = new_value.unbound_vars();
+        self.replace_with(target_var, new_value, &unboud_vars)
     }
 
     /// Detalhe de implementação da substituição de variáveis.
