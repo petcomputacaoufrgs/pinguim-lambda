@@ -324,7 +324,7 @@ impl Value {
 
         todo!();
         */
-        let unboud_vars = new_value.unbound_vars();
+        let unboud_vars = new_value.unbound_vars().collect();
         self.replace_with(target_var, new_value, &unboud_vars)
     }
 
@@ -351,7 +351,8 @@ impl Value {
             Value::Lambda { parameter, body } => {
                 if parameter != target_var {
                     if new_value_unbound.contains(parameter.as_str()) {
-                        let body_unbound = body.unbound_vars();
+                        let body_unbound =
+                            body.unbound_vars().collect::<HashSet<_>>();
                         let mut renamed_var = format!("{}_", parameter);
                         while new_value_unbound.contains(renamed_var.as_str())
                             || body_unbound.contains(renamed_var.as_str())
@@ -406,49 +407,12 @@ impl Value {
         redex_found
     }
 
-    /// Retorna o conjunto das varíaveis não ligadas nesse termo.
-    pub fn unbound_vars(&self) -> HashSet<&str> {
-        /// Um passo para calcular o conjunto das variáveis livres.
-        enum Operation<'value> {
-            /// Visita um termo para coletar suas variáveis livres.
-            Visit(&'value Value),
-            /// Remove uma variável do conjunto das variáveis ligadas.
-            RemoveBound(&'value str),
+    /// Cria um iterador sobre as variáveis não-ligadas neste termo. Variáveis podem aparecer mais de uma vez.
+    pub fn unbound_vars(&self) -> UnboundVars {
+        UnboundVars {
+            operation_stack: vec![UnboundVarsOper::Visit(self)],
+            bound_set: HashSet::new(),
         }
-
-        let mut operation_stack = vec![Operation::Visit(self)];
-        let mut unbound_set = HashSet::<&str>::new();
-        let mut bound_set = HashSet::<&str>::new();
-
-        while let Some(operation) = operation_stack.pop() {
-            match operation {
-                Operation::Visit(value) => match value {
-                    Value::Variable(variable) => {
-                        if !bound_set.contains(variable.as_str()) {
-                            unbound_set.insert(variable);
-                        }
-                    }
-                    Value::Application { function, argument } => {
-                        operation_stack.push(Operation::Visit(function));
-                        operation_stack.push(Operation::Visit(argument));
-                    }
-                    Value::Lambda { parameter, body } => {
-                        let was_inserted = bound_set.insert(parameter);
-                        if was_inserted {
-                            operation_stack
-                                .push(Operation::RemoveBound(parameter));
-                        }
-                        operation_stack.push(Operation::Visit(body));
-                    }
-                },
-
-                Operation::RemoveBound(parameter) => {
-                    bound_set.remove(parameter);
-                }
-            }
-        }
-
-        unbound_set
     }
 }
 
@@ -510,6 +474,62 @@ impl Clone for Value {
         }
         output_stack.pop().expect("clone value")
     }
+}
+
+/// Iterador que produz nomes de variáveis não-ligadas em um termo lambda. Nome de variáveis podem repetir.
+#[derive(Debug, Clone)]
+pub struct UnboundVars<'value> {
+    /// Pilha de operações/passos para coletar variáveis não-ligadas.
+    operation_stack: Vec<UnboundVarsOper<'value>>,
+    /// Rastreio de variáveis já ligadas.
+    bound_set: HashSet<&'value str>,
+}
+
+impl<'value> Iterator for UnboundVars<'value> {
+    type Item = &'value str;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(operation) = self.operation_stack.pop() {
+            match operation {
+                UnboundVarsOper::Visit(value) => match value {
+                    Value::Variable(variable) => {
+                        if !self.bound_set.contains(variable.as_str()) {
+                            return Some(variable);
+                        }
+                    }
+                    Value::Application { function, argument } => {
+                        self.operation_stack
+                            .push(UnboundVarsOper::Visit(function));
+                        self.operation_stack
+                            .push(UnboundVarsOper::Visit(argument));
+                    }
+                    Value::Lambda { parameter, body } => {
+                        let was_inserted = self.bound_set.insert(parameter);
+                        if was_inserted {
+                            self.operation_stack
+                                .push(UnboundVarsOper::RemoveBound(parameter));
+                        }
+                        self.operation_stack.push(UnboundVarsOper::Visit(body));
+                    }
+                },
+
+                UnboundVarsOper::RemoveBound(parameter) => {
+                    self.bound_set.remove(parameter);
+                }
+            }
+        }
+
+        None
+    }
+}
+
+#[derive(Debug, Clone)]
+/// Um passo para calcular o conjunto das variáveis não-ligadas. Uso interno do iterador de variáveis não-ligadas.
+enum UnboundVarsOper<'value> {
+    /// Visita um termo para coletar suas variáveis não-ligadas.
+    Visit(&'value Value),
+    /// Remove uma variável do conjunto das variáveis ligadas.
+    RemoveBound(&'value str),
 }
 
 /// Um termo aninhado de cálculo lambda com ponteiro indireto para o termo contido.
