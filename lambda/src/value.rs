@@ -241,22 +241,38 @@ impl Value {
     /// Solução mais básica? Aumentar o nome da variável com `_` até não haver
     /// variáveis livres.
     pub fn replace(&mut self, target_var: &str, new_value: &Self) {
-        /*
         struct Replacement<'var, 'new_value> {
-            target_var: &'var str,
-            new_value: &'new_value Value,
-            unbound_vars: HashSet<&'new_value str>,
+            target_var: Cow<'var, str>,
+            new_value: Cow<'new_value, Value>,
+            unbound_vars: HashSet<Cow<'new_value, str>>,
         }
 
         impl<'var, 'new_value> Replacement<'var, 'new_value> {
-            fn new(
+            fn new_borrowed(
                 target_var: &'var str,
                 new_value: &'new_value Value,
             ) -> Self {
                 Self {
-                    target_var,
-                    new_value,
-                    unbound_vars: new_value.unbound_vars(),
+                    target_var: Cow::Borrowed(target_var),
+                    new_value: Cow::Borrowed(new_value),
+                    unbound_vars: new_value
+                        .unbound_vars()
+                        .map(Cow::Borrowed)
+                        .collect(),
+                }
+            }
+
+            fn new_owned(target_var: String, new_value: Value) -> Self {
+                let unbound_vars = new_value
+                    .unbound_vars()
+                    .map(ToOwned::to_owned)
+                    .map(Cow::Owned)
+                    .collect();
+
+                Self {
+                    target_var: Cow::Owned(target_var),
+                    new_value: Cow::Owned(new_value),
+                    unbound_vars,
                 }
             }
         }
@@ -266,7 +282,7 @@ impl Value {
             DropReplacement,
         }
 
-        let mut replacement = Replacement::new(target_var, new_value);
+        let mut replacement = Replacement::new_borrowed(target_var, new_value);
         let mut replacement_stack = Vec::new();
         let mut operation_stack = vec![Operation::Replace(self)];
 
@@ -274,8 +290,8 @@ impl Value {
             match operation {
                 Operation::Replace(value) => match value {
                     Value::Variable(variable) => {
-                        if variable == target_var {
-                            *value = new_value.clone();
+                        if variable == &replacement.target_var {
+                            *value = replacement.new_value.clone().into_owned();
                         }
                     }
 
@@ -285,13 +301,14 @@ impl Value {
                     }
 
                     Value::Lambda { parameter, body } => {
-                        if parameter != target_var {
+                        if parameter != &replacement.target_var {
                             operation_stack.push(Operation::Replace(body));
                             if replacement
                                 .unbound_vars
                                 .contains(parameter.as_str())
                             {
-                                let body_unbound = body.unbound_vars();
+                                let body_unbound =
+                                    body.unbound_vars().collect::<HashSet<_>>();
                                 let mut renamed_var = format!("{}_", parameter);
                                 while replacement
                                     .unbound_vars
@@ -301,16 +318,16 @@ impl Value {
                                 {
                                     renamed_var.push('_');
                                 }
+                                let old_parameter = mem::replace(
+                                    parameter,
+                                    renamed_var.clone(),
+                                );
                                 replacement_stack.push(mem::replace(
                                     &mut replacement,
-                                    Replacement::new(
-                                        parameter.as_str(),
-                                        &Value::Variable(renamed_var.clone()),
+                                    Replacement::new_owned(
+                                        old_parameter,
+                                        Value::Variable(renamed_var),
                                     ),
-                                ));
-                                operation_stack.push(Operation::RenameParam(
-                                    parameter,
-                                    renamed_var,
                                 ));
                                 operation_stack
                                     .push(Operation::DropReplacement);
@@ -319,13 +336,19 @@ impl Value {
                         }
                     }
                 },
+                Operation::DropReplacement => {
+                    replacement =
+                        replacement_stack.pop().expect("replacement pop");
+                }
             }
         }
 
         todo!();
-        */
+
+        /*
         let unboud_vars = new_value.unbound_vars().collect();
         self.replace_with(target_var, new_value, &unboud_vars)
+        */
     }
 
     /// Detalhe de implementação da substituição de variáveis.
