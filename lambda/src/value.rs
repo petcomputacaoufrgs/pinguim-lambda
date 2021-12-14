@@ -241,38 +241,36 @@ impl Value {
     /// Solução mais básica? Aumentar o nome da variável com `_` até não haver
     /// variáveis livres.
     pub fn replace(&mut self, target_var: &str, new_value: &Self) {
-        struct Replacement<'var, 'new_value> {
-            target_var: Cow<'var, str>,
-            new_value: Cow<'new_value, Value>,
-            unbound_vars: HashSet<Cow<'new_value, str>>,
+        enum Replacement<'this, 'var, 'new_value> {
+            Main(&'var str, &'new_value Value, HashSet<&'new_value str>),
+            Rename { old_parameter: String, new_parameter: &'this str },
         }
 
-        impl<'var, 'new_value> Replacement<'var, 'new_value> {
-            fn new_borrowed(
-                target_var: &'var str,
-                new_value: &'new_value Value,
-            ) -> Self {
-                Self {
-                    target_var: Cow::Borrowed(target_var),
-                    new_value: Cow::Borrowed(new_value),
-                    unbound_vars: new_value
-                        .unbound_vars()
-                        .map(Cow::Borrowed)
-                        .collect(),
+        impl<'this, 'var, 'new_value> Replacement<'this, 'var, 'new_value> {
+            fn is_unbound_var(&self, var_name: &str) -> bool {
+                match self {
+                    Replacement::Main(_, _, unbound_set) => {
+                        unbound_set.contains(var_name)
+                    }
+                    Replacement::Rename { new_parameter, .. } => {
+                        *new_parameter == var_name
+                    }
                 }
             }
 
-            fn new_owned(target_var: String, new_value: Value) -> Self {
-                let unbound_vars = new_value
-                    .unbound_vars()
-                    .map(ToOwned::to_owned)
-                    .map(Cow::Owned)
-                    .collect();
+            fn target_var(&self) -> &str {
+                match self {
+                    Replacement::Main(target_var, _, _) => target_var,
+                    Replacement::Rename { old_parameter, .. } => old_parameter,
+                }
+            }
 
-                Self {
-                    target_var: Cow::Owned(target_var),
-                    new_value: Cow::Owned(new_value),
-                    unbound_vars,
+            fn clone_new_value(&self) -> Value {
+                match self {
+                    Replacement::Main(_, new_value, _) => (*new_value).clone(),
+                    Replacement::Rename { new_parameter, .. } => {
+                        Value::Variable((*new_parameter).to_owned())
+                    }
                 }
             }
         }
@@ -282,8 +280,8 @@ impl Value {
             DropReplacement,
         }
 
-        let mut replacement = Replacement::new_borrowed(target_var, new_value);
-        let mut replacement_stack = Vec::new();
+        let mut replacements =
+            vec![Replacement::new_borrowed(target_var, new_value)];
         let mut operation_stack = vec![Operation::Replace(self)];
 
         while let Some(operation) = operation_stack.pop() {
