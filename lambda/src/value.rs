@@ -3,7 +3,6 @@
 #[cfg(test)]
 mod test;
 
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::mem;
@@ -53,7 +52,7 @@ use std::ops::{Deref, DerefMut};
 ///
 /// reduced = `a (λy. y)`
 /// ```
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Eq, PartialOrd, Ord, Hash)]
 pub enum Value {
     /// Uma variável.
     ///
@@ -416,6 +415,51 @@ impl Value {
             operation_stack: vec![UnboundVarsOper::Visit(self)],
             bound_set: HashSet::new(),
         }
+    }
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        let mut equals = true;
+
+        let mut compare_stack = vec![(self, other)];
+        while let Some((self_value, other_value)) =
+            compare_stack.pop().filter(|_| equals)
+        {
+            match (self_value, other_value) {
+                (Value::Variable(self_var), Value::Variable(other_var)) => {
+                    equals = self_var == other_var;
+                }
+
+                (
+                    Value::Application {
+                        function: self_func,
+                        argument: self_arg,
+                    },
+                    Value::Application {
+                        function: other_func,
+                        argument: other_arg,
+                    },
+                ) => {
+                    compare_stack.push((self_func, other_func));
+                    compare_stack.push((self_arg, other_arg));
+                }
+
+                (
+                    Value::Lambda { body: self_body, parameter: self_param },
+                    Value::Lambda { body: other_body, parameter: other_param },
+                ) => {
+                    equals = self_param == other_param;
+                    if equals {
+                        compare_stack.push((self_body, other_body));
+                    }
+                }
+
+                _ => equals = false,
+            }
+        }
+
+        equals
     }
 }
 
