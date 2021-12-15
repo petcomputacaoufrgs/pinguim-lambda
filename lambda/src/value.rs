@@ -276,117 +276,99 @@ impl Value {
         }
 
         enum Operation<'this> {
-            Replace(&'this mut Value),
-            DropReplacement,
+            Replace(&'this mut Value, usize),
+            DropReplacement(usize),
         }
 
-        let mut replacements =
-            vec![Replacement::new_borrowed(target_var, new_value)];
-        let mut operation_stack = vec![Operation::Replace(self)];
+        let mut replacements = vec![Replacement::Main(
+            target_var,
+            new_value,
+            new_value.unbound_vars().collect(),
+        )];
+        let mut operation_stack = vec![Operation::Replace(self, 1)];
 
         while let Some(operation) = operation_stack.pop() {
             match operation {
-                Operation::Replace(value) => match value {
+                Operation::Replace(value, soft_size) => match value {
                     Value::Variable(variable) => {
-                        if variable == &replacement.target_var {
-                            *value = replacement.new_value.clone().into_owned();
+                        if let Some(position) = replacements[..soft_size]
+                            .iter()
+                            .rposition(|replacement| {
+                                variable == replacement.target_var()
+                            })
+                        {
+                            *value = replacements[position].clone_new_value();
+                            operation_stack
+                                .push(Operation::Replace(value, position));
                         }
                     }
 
                     Value::Application { function, argument } => {
-                        operation_stack.push(Operation::Replace(function));
-                        operation_stack.push(Operation::Replace(argument));
+                        operation_stack
+                            .push(Operation::Replace(function, soft_size));
+                        operation_stack
+                            .push(Operation::Replace(argument, soft_size));
                     }
 
                     Value::Lambda { parameter, body } => {
-                        if parameter != &replacement.target_var {
-                            operation_stack.push(Operation::Replace(body));
-                            if replacement
-                                .unbound_vars
-                                .contains(parameter.as_str())
-                            {
-                                let body_unbound =
-                                    body.unbound_vars().collect::<HashSet<_>>();
-                                let mut renamed_var = format!("{}_", parameter);
-                                while replacement
-                                    .unbound_vars
-                                    .contains(renamed_var.as_str())
+                        let mut new_soft_size = replacements[..soft_size]
+                            .iter()
+                            .position(|replacement| {
+                                parameter == replacement.target_var()
+                            })
+                            .unwrap_or(soft_size);
+
+                        let mut is_unbound_var = replacements[..new_soft_size]
+                            .iter()
+                            .any(|replacement| {
+                                replacement.is_unbound_var(parameter)
+                            });
+
+                        if is_unbound_var {
+                            is_unbound_var = replacements[..new_soft_size]
+                                .iter()
+                                .any(|replacement| {
+                                    replacement.is_unbound_var(parameter)
+                                });
+                            let body_unbound =
+                                body.unbound_vars().collect::<HashSet<_>>();
+                            let mut renamed_var = format!("{}_", parameter);
+                            while is_unbound_var {
+                                is_unbound_var = replacements[..new_soft_size]
+                                    .iter()
+                                    .any(|replacement| {
+                                        replacement.is_unbound_var(
+                                            renamed_var.as_str(),
+                                        )
+                                    });
+                                is_unbound_var = is_unbound_var
                                     || body_unbound
-                                        .contains(renamed_var.as_str())
-                                {
+                                        .contains(renamed_var.as_str());
+                                if is_unbound_var {
                                     renamed_var.push('_');
                                 }
-                                let old_parameter = mem::replace(
-                                    parameter,
-                                    renamed_var.clone(),
-                                );
-                                replacement_stack.push(mem::replace(
-                                    &mut replacement,
-                                    Replacement::new_owned(
-                                        old_parameter,
-                                        Value::Variable(renamed_var),
-                                    ),
-                                ));
-                                operation_stack
-                                    .push(Operation::DropReplacement);
-                                operation_stack.push(Operation::Replace(body));
                             }
+                            let old_parameter =
+                                mem::replace(parameter, renamed_var.clone());
+                            replacements.insert(
+                                new_soft_size,
+                                Replacement::Rename {
+                                    old_parameter,
+                                    new_parameter: parameter.as_str(),
+                                },
+                            );
+                            operation_stack.push(Operation::DropReplacement(
+                                new_soft_size,
+                            ));
+                            new_soft_size += 1;
                         }
+                        operation_stack
+                            .push(Operation::Replace(body, new_soft_size));
                     }
                 },
-                Operation::DropReplacement => {
-                    replacement =
-                        replacement_stack.pop().expect("replacement pop");
-                }
-            }
-        }
 
-        todo!();
-
-        /*
-        let unboud_vars = new_value.unbound_vars().collect();
-        self.replace_with(target_var, new_value, &unboud_vars)
-        */
-    }
-
-    /// Detalhe de implementação da substituição de variáveis.
-    /// Realiza a substituição recursivamente, utilizando estruturas auxiliares já inicializadas.
-    fn replace_with(
-        &mut self,
-        target_var: &str,
-        new_value: &Self,
-        new_value_unbound: &HashSet<&str>,
-    ) {
-        match self {
-            Value::Variable(variable) => {
-                if variable == target_var {
-                    *self = new_value.clone();
-                }
-            }
-
-            Value::Application { function, argument } => {
-                function.replace_with(target_var, new_value, new_value_unbound);
-                argument.replace_with(target_var, new_value, new_value_unbound);
-            }
-
-            Value::Lambda { parameter, body } => {
-                if parameter != target_var {
-                    if new_value_unbound.contains(parameter.as_str()) {
-                        let body_unbound =
-                            body.unbound_vars().collect::<HashSet<_>>();
-                        let mut renamed_var = format!("{}_", parameter);
-                        while new_value_unbound.contains(renamed_var.as_str())
-                            || body_unbound.contains(renamed_var.as_str())
-                        {
-                            renamed_var.push('_');
-                        }
-                        body.replace(
-                            parameter.as_str(),
-                            &Value::Variable(renamed_var.clone()),
-                        );
-                        *parameter = renamed_var;
-                    }
-                    body.replace_with(target_var, new_value, new_value_unbound);
+                Operation::DropReplacement(index) => {
+                    replacements.remove(index);
                 }
             }
         }
