@@ -327,33 +327,28 @@ impl Value {
                             })
                             .unwrap_or(soft_size);
 
-                        let mut is_param_unbound = replacements
-                            [..new_soft_size]
-                            .iter()
-                            .any(|replacement| {
-                                replacement.is_unbound_var(parameter)
-                            });
+                        let is_unbound_var = |variable: &str| {
+                            replacements[..new_soft_size].iter().any(
+                                |replacement| {
+                                    replacement.is_unbound_var(variable)
+                                },
+                            )
+                        };
+                        let mut param_unbound = is_unbound_var(parameter);
 
-                        if is_param_unbound {
-                            let body_unbound =
-                                body.unbound_vars().collect::<HashSet<_>>();
+                        if param_unbound {
+                            let body_unbound: HashSet<_> =
+                                body.unbound_vars().collect();
                             let mut renamed_var = format!("{}_", parameter);
-                            while is_param_unbound {
-                                is_param_unbound = replacements
-                                    [..new_soft_size]
-                                    .iter()
-                                    .any(|replacement| {
-                                        replacement.is_unbound_var(
-                                            renamed_var.as_str(),
-                                        )
-                                    });
-                                is_param_unbound = is_param_unbound
+                            while param_unbound {
+                                param_unbound = is_unbound_var(&renamed_var)
                                     || body_unbound
                                         .contains(renamed_var.as_str());
-                                if is_param_unbound {
+                                if param_unbound {
                                     renamed_var.push('_');
                                 }
                             }
+
                             let old_parameter =
                                 mem::replace(parameter, renamed_var.clone());
                             replacements.insert(
