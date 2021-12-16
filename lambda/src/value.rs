@@ -240,12 +240,17 @@ impl Value {
     /// Solução mais básica? Aumentar o nome da variável com `_` até não haver
     /// variáveis livres.
     pub fn replace(&mut self, target_var: &str, new_value: &Self) {
+        /// Argumentos de uma substituição com variável a ser substituída e novo valor.
         enum Replacement<'this, 'var, 'new_value> {
+            /// Substituição principal requisitada ao chamar o método [`Value::replace`].
+            /// O conjunto presente é o conjunto de variáveis não-ligadas no novo valor.
             Main(&'var str, &'new_value Value, HashSet<&'new_value str>),
+            /// Substituição intermediária para renomear o parâmetro de um lambda.
             Rename { old_parameter: String, new_parameter: &'this str },
         }
 
         impl<'this, 'var, 'new_value> Replacement<'this, 'var, 'new_value> {
+            /// Testa se a dada variável é não-ligada dentro do novo valor desta substituição.
             fn is_unbound_var(&self, var_name: &str) -> bool {
                 match self {
                     Replacement::Main(_, _, unbound_set) => {
@@ -257,6 +262,7 @@ impl Value {
                 }
             }
 
+            /// Retorna o nome da variável alvo da substituição, isto é, a variável a ser substituída.
             fn target_var(&self) -> &str {
                 match self {
                     Replacement::Main(target_var, _, _) => target_var,
@@ -264,6 +270,7 @@ impl Value {
                 }
             }
 
+            /// Clona recursos e retorna o novo termo a ser usado na substituição.
             fn clone_new_value(&self) -> Value {
                 match self {
                     Replacement::Main(_, new_value, _) => (*new_value).clone(),
@@ -274,8 +281,11 @@ impl Value {
             }
         }
 
+        /// Uma operação/passo para realizar a substituição requisitada.
         enum Operation<'this> {
+            /// Performa todas as substituições do vetor de substituições dentro do tamanho máximo informado nesta operação.
             Replace(&'this mut Value, usize),
+            /// Remove uma substituição a ser realizada do vetor de substituições, usando o índice informado.
             DropReplacement(usize),
         }
 
@@ -317,33 +327,30 @@ impl Value {
                             })
                             .unwrap_or(soft_size);
 
-                        let mut is_unbound_var = replacements[..new_soft_size]
+                        let mut is_param_unbound = replacements
+                            [..new_soft_size]
                             .iter()
                             .any(|replacement| {
                                 replacement.is_unbound_var(parameter)
                             });
 
-                        if is_unbound_var {
-                            is_unbound_var = replacements[..new_soft_size]
-                                .iter()
-                                .any(|replacement| {
-                                    replacement.is_unbound_var(parameter)
-                                });
+                        if is_param_unbound {
                             let body_unbound =
                                 body.unbound_vars().collect::<HashSet<_>>();
                             let mut renamed_var = format!("{}_", parameter);
-                            while is_unbound_var {
-                                is_unbound_var = replacements[..new_soft_size]
+                            while is_param_unbound {
+                                is_param_unbound = replacements
+                                    [..new_soft_size]
                                     .iter()
                                     .any(|replacement| {
                                         replacement.is_unbound_var(
                                             renamed_var.as_str(),
                                         )
                                     });
-                                is_unbound_var = is_unbound_var
+                                is_param_unbound = is_param_unbound
                                     || body_unbound
                                         .contains(renamed_var.as_str());
-                                if is_unbound_var {
+                                if is_param_unbound {
                                     renamed_var.push('_');
                                 }
                             }
