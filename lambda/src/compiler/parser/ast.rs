@@ -1,13 +1,32 @@
+use crate::compiler::position::Span;
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Value {
-    Variable(String),
-    Application { function: Box<Value>, argument: Box<Value> },
-    Lambda { parameter: String, body: Box<Value> },
+pub enum Expr {
+    Variable(Symbol),
+    Number(u64),
+    Application { function: Box<Expr>, argument: Box<Expr> },
+    Lambda { parameter: Symbol, body: Box<Expr> },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
-    main_expression: Value,
-    expressions: IndexMap<String, Value>,
+    pub main_expression: Expr,
+    pub bindings: IndexMap<String, Binding>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Binding {
+    pub name: Symbol,
+    pub expression: Expr,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Symbol {
+    ///
+    /// - `content`: palavra do código, mas que não é necessariamente código em si
+    pub content: String,
+    ///
+    /// - `span`: localização dessa palavra no código
+    pub span: Span,
 }
