@@ -103,8 +103,9 @@ impl Parser {
             IndexMap::new()
         };
 
-        let main_expression = self.parse_expression()?;
-        Ok(Some(Program { main_expression, bindings }))
+        let main_expr_opt = self.parse_expression()?;
+        Ok(main_expr_opt
+            .map(|main_expression| Program { main_expression, bindings }))
     }
 
     fn parse_let(&mut self) -> Result<IndexMap<String, Binding>, Abort> {
@@ -124,21 +125,24 @@ impl Parser {
 
     // ident = \x y . xyz
     fn parse_binding(&mut self) -> Result<Option<Binding>, Abort> {
-        let name = self.parse_binding_name();
+        let name_opt = self.parse_binding_name()?;
 
-        self.expect(TokenType::Equal);
-        self.next();
+        self.expect(TokenType::Equal)?;
+        let expression_opt = self.parse_expression()?;
 
-        todo!()
+        Ok(name_opt
+            .zip(expression_opt)
+            .map(|(name, expression)| Binding { name, expression }))
     }
 
-    fn parse_binding_name(&mut self) -> Result<Option<String>, Abort> {
+    fn parse_binding_name(&mut self) -> Result<Option<Symbol>, Abort> {
         let token = self.require_current()?;
 
         if token.token_type == TokenType::Identifier {
-            let expr_name = token.content.clone();
-
-            Ok(Some(expr_name))
+            Ok(Some(Symbol {
+                content: token.content.clone(),
+                span: token.span,
+            }))
         } else {
             let expected_types = vec![TokenType::Identifier];
             //error: UnexpectedToken
@@ -146,11 +150,96 @@ impl Parser {
         }
     }
 
-    fn parse_expression(&mut self) -> Result<Expr, Abort> {
-        let mut expr_value: Expr;
+    fn parse_expression(&mut self) -> Result<Option<Expr>, Abort> {
+        let mut curr_expr: Option<Expr> = None;
 
-        self.next();
+        // a condição de parada vai ser algum tokentype tipo In ou Semicolon ou entao EOF
+        loop {
+            let token = self.require_current()?;
 
-        todo!()
+            match token.token_type {
+                TokenType::Number => {
+                    let number = Expr::Number(token.content.parse().unwrap());
+
+                    self.stack_exprs(&mut curr_expr, number);
+                }
+                TokenType::Identifier => {
+                    let ident = Expr::Variable(Symbol {
+                        content: token.content.clone(),
+                        span: token.span,
+                    });
+
+                    self.stack_exprs(&mut curr_expr, ident);
+                }
+                TokenType::Lambda => {
+                    if let Some(lambda) = self.parse_lambda()? {
+                        self.stack_exprs(&mut curr_expr, lambda);
+                    }
+                }
+                TokenType::OpenParen => {
+                    self.next();
+
+                    if let Some(sub_expr) = self.parse_expression()? {
+                        self.stack_exprs(&mut curr_expr, sub_expr);
+                        self.next();
+                    }
+                }
+                _ => {
+                    // erro
+                }
+            }
+        }
+
+        Ok(curr_expr) // REVISAR ERRO
+    }
+
+    fn stack_exprs(&self, curr_expr: &mut Option<Expr>, new_expr: Expr) {
+        *curr_expr = match curr_expr.take() {
+            Some(expr) => Some(Expr::Application {
+                function: Box::new(expr),
+                argument: Box::new(new_expr),
+            }),
+            None => Some(new_expr),
+        }
+    }
+
+    fn parse_lambda(&mut self) -> Result<Option<Expr>, Abort> {
+        self.expect(TokenType::Lambda)?;
+
+        let mut params = Vec::new();
+
+        // até o ponto são os parâmetros da expressão lambda
+        while !self.check_expect(TokenType::Dot)? {
+            if let Some(param) = self.parse_param()? {
+                params.push(param);
+            }
+        }
+
+        // corpo da expressão lambda
+        let lambda = self.parse_expression()?.map(|lambda_body| {
+            let mut expr = lambda_body;
+            for param in params.into_iter().rev() {
+                expr = Expr::Lambda { parameter: param, body: Box::new(expr) };
+            }
+
+            expr
+        });
+
+        Ok(lambda)
+    }
+
+    fn parse_param(&mut self) -> Result<Option<Symbol>, Abort> {
+        let token = self.require_current()?;
+
+        if token.token_type == TokenType::Identifier {
+            Ok(Some(Symbol {
+                content: token.content.clone(),
+                span: token.span,
+            }))
+        } else {
+            let expected_types = vec![TokenType::Identifier];
+            //error: IdentifierExpected/UnexpectedToken
+            todo!()
+        }
     }
 }
