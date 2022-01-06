@@ -1,9 +1,13 @@
 pub mod ast;
+pub mod error;
 
 use super::error::{Diagnostics, Error};
 use crate::compiler::lexer::token::{Token, TokenType};
 use ast::{Binding, Expr, Program, Symbol};
-use indexmap::IndexMap;
+use error::{
+    UnexpectedEndOfInput, UnexpectedToken, UnmatchedCloseParen,
+    UnmatchedOpenParen,
+};
 
 /// Cria uma estrutura Parser e parsa a lista de tokens para um programa
 ///
@@ -13,7 +17,7 @@ pub fn parse(
     tokens: Vec<Token>,
     diagnostics: &mut Diagnostics,
 ) -> Option<Program> {
-    Parser::new(tokens).parse_program().ok().flatten()
+    Parser::new(tokens).parse_program(diagnostics).ok().flatten()
 }
 
 #[derive(Debug)]
@@ -44,10 +48,16 @@ impl Parser {
     /// Pega o token o qual está sendo parsado no momento e garante que ele exista
     ///
     /// - `diagnostics`: vetor que armazena erros coletados durante a compilação
-    fn require_current(&self) -> Result<&Token, Abort> {
+    fn require_current(
+        &self,
+        diagnostics: &mut Diagnostics,
+    ) -> Result<&Token, Abort> {
         match self.current() {
             Some(token) => Ok(token),
-            None => Err(Abort),
+            None => {
+                diagnostics.raise(Error::with_no_span(UnexpectedEndOfInput));
+                Err(Abort)
+            }
         }
     }
 
@@ -60,14 +70,21 @@ impl Parser {
     ///
     /// - `expected_type`: tipo de token que é esperado encontrar
     /// - `diagnostics`: vetor que armazena erros coletados durante a compilação
-    fn expect(&mut self, expected_type: TokenType) -> Result<(), Abort> {
-        let token = self.require_current()?;
+    fn expect(
+        &mut self,
+        expected_type: TokenType,
+        diagnostics: &mut Diagnostics,
+    ) -> Result<(), Abort> {
+        let token = self.require_current(diagnostics)?;
 
         if token.token_type == expected_type {
             self.next();
         } else {
             let expected_types = vec![expected_type];
-            //Acrescentar Diagnostics
+            diagnostics.raise(Error::new(
+                UnexpectedToken { expected_types },
+                token.span,
+            ));
         }
 
         Ok(())
@@ -80,8 +97,9 @@ impl Parser {
     fn check_expect(
         &mut self,
         expected_type: TokenType,
+        diagnostics: &mut Diagnostics,
     ) -> Result<bool, Abort> {
-        let token = self.require_current()?;
+        let token = self.require_current(diagnostics)?;
 
         if token.token_type == expected_type {
             self.next();
@@ -94,53 +112,66 @@ impl Parser {
     /// Faz o parse do vetor de tokens em um programa
     ///
     /// - `diagnostics`: vetor que armazena erros coletados durante a compilação
-    fn parse_program(&mut self) -> Result<Option<Program>, Abort> {
-        let token = self.require_current()?;
+    fn parse_program(
+        &mut self,
+        diagnostics: &mut Diagnostics,
+    ) -> Result<Option<Program>, Abort> {
+        let token = self.require_current(diagnostics)?;
 
         let bindings = if token.token_type == TokenType::Let {
-            self.parse_let()?
+            self.parse_let(diagnostics)?
         } else {
-            IndexMap::new()
+            Vec::new()
         };
 
-        let main_expr_opt =
-            self.parse_expression(|token_type| token_type == None)?;
+        let main_expr_opt = self
+            .parse_expression(diagnostics, |token_type| token_type == None)?;
         Ok(main_expr_opt
             .map(|main_expression| Program { main_expression, bindings }))
     }
 
-    fn parse_let(&mut self) -> Result<IndexMap<String, Binding>, Abort> {
-        self.expect(TokenType::Let)?; // facilita isolamento dessa função (expect() X next())
-        let mut bindings = IndexMap::<String, Binding>::new();
+    fn parse_let(
+        &mut self,
+        diagnostics: &mut Diagnostics,
+    ) -> Result<Vec<Binding>, Abort> {
+        self.expect(TokenType::Let, diagnostics)?; // facilita isolamento dessa função (expect() X next())
+        let mut bindings = Vec::new();
 
-        while !self.check_expect(TokenType::In)? {
-            if let Some(binding) = self.parse_binding()? {
-                bindings.insert(binding.name.content.clone(), binding);
+        while !self.check_expect(TokenType::In, diagnostics)? {
+            if let Some(binding) = self.parse_binding(diagnostics)? {
+                bindings.push(binding);
             }
 
-            self.check_expect(TokenType::Semicolon)?;
+            self.check_expect(TokenType::Semicolon, diagnostics)?;
         }
 
         Ok(bindings)
     }
 
     // ident = \x y . xyz
-    fn parse_binding(&mut self) -> Result<Option<Binding>, Abort> {
-        let name_opt = self.parse_binding_name()?;
+    fn parse_binding(
+        &mut self,
+        diagnostics: &mut Diagnostics,
+    ) -> Result<Option<Binding>, Abort> {
+        let name_opt = self.parse_binding_name(diagnostics)?;
 
-        self.expect(TokenType::Equal)?;
-        let expression_opt = self.parse_expression(|token_type| {
-            token_type == Some(TokenType::In)
-                || token_type == Some(TokenType::Semicolon)
-        })?;
+        self.expect(TokenType::Equal, diagnostics)?;
+        let expression_opt =
+            self.parse_expression(diagnostics, |token_type| {
+                token_type == Some(TokenType::In)
+                    || token_type == Some(TokenType::Semicolon)
+            })?;
 
         Ok(name_opt
             .zip(expression_opt)
             .map(|(name, expression)| Binding { name, expression }))
     }
 
-    fn parse_binding_name(&mut self) -> Result<Option<Symbol>, Abort> {
-        let token = self.require_current()?;
+    fn parse_binding_name(
+        &mut self,
+        diagnostics: &mut Diagnostics,
+    ) -> Result<Option<Symbol>, Abort> {
+        let token = self.require_current(diagnostics)?;
 
         if token.token_type == TokenType::Identifier {
             Ok(Some(Symbol {
@@ -149,13 +180,18 @@ impl Parser {
             }))
         } else {
             let expected_types = vec![TokenType::Identifier];
-            //error: UnexpectedToken
-            todo!()
+            diagnostics.raise(Error::new(
+                UnexpectedToken { expected_types },
+                token.span,
+            ));
+
+            Ok(None)
         }
     }
 
     fn parse_expression<F>(
         &mut self,
+        diagnostics: &mut Diagnostics,
         mut is_end: F,
     ) -> Result<Option<Expr>, Abort>
     where
@@ -165,7 +201,7 @@ impl Parser {
 
         // a condição de parada vai ser algum tokentype tipo In ou Semicolon ou entao EOF
         while !is_end(self.current().map(|token| token.token_type)) {
-            let token = self.require_current()?;
+            let token = self.require_current(diagnostics)?;
 
             match token.token_type {
                 TokenType::Number => {
@@ -182,27 +218,53 @@ impl Parser {
                     self.stack_exprs(&mut curr_expr, ident);
                 }
                 TokenType::Lambda => {
-                    if let Some(lambda) = self.parse_lambda(&mut is_end)? {
+                    if let Some(lambda) =
+                        self.parse_lambda(diagnostics, &mut is_end)?
+                    {
                         self.stack_exprs(&mut curr_expr, lambda);
                     }
                 }
                 TokenType::OpenParen => {
+                    let span = token.span;
                     self.next();
 
-                    if let Some(sub_expr) =
-                        self.parse_expression(|token_type| {
+                    if let Some(sub_expr) = self
+                        .parse_expression(diagnostics, |token_type| {
                             token_type == Some(TokenType::CloseParen)
                         })?
                     {
                         self.stack_exprs(&mut curr_expr, sub_expr);
-                        self.next();
+                        match self.current() {
+                            Some(token)
+                                if token.token_type
+                                    == TokenType::CloseParen =>
+                            {
+                                self.next();
+                            }
+                            _ => {
+                                diagnostics.raise(Error::new(
+                                    UnmatchedOpenParen,
+                                    span,
+                                ));
+                            }
+                        }
                     }
                 }
                 TokenType::CloseParen => {
-                    // erro
+                    diagnostics
+                        .raise(Error::new(UnmatchedCloseParen, token.span));
                 }
                 _ => {
-                    // erro
+                    let expected_types = vec![
+                        TokenType::Number,
+                        TokenType::Identifier,
+                        TokenType::Lambda,
+                        TokenType::OpenParen,
+                    ];
+                    diagnostics.raise(Error::new(
+                        UnexpectedToken { expected_types },
+                        token.span,
+                    ));
                 }
             }
         }
@@ -220,36 +282,45 @@ impl Parser {
         }
     }
 
-    fn parse_lambda<F>(&mut self, is_end: F) -> Result<Option<Expr>, Abort>
+    fn parse_lambda<F>(
+        &mut self,
+        diagnostics: &mut Diagnostics,
+        is_end: F,
+    ) -> Result<Option<Expr>, Abort>
     where
         F: FnMut(Option<TokenType>) -> bool,
     {
-        self.expect(TokenType::Lambda)?;
+        self.expect(TokenType::Lambda, diagnostics)?;
 
         let mut params = Vec::new();
 
         // até o ponto são os parâmetros da expressão lambda
-        while !self.check_expect(TokenType::Dot)? {
-            if let Some(param) = self.parse_param()? {
+        while !self.check_expect(TokenType::Dot, diagnostics)? {
+            if let Some(param) = self.parse_param(diagnostics)? {
                 params.push(param);
             }
         }
 
         // corpo da expressão lambda
-        let lambda = self.parse_expression(is_end)?.map(|lambda_body| {
-            let mut expr = lambda_body;
-            for param in params.into_iter().rev() {
-                expr = Expr::Lambda { parameter: param, body: Box::new(expr) };
-            }
+        let lambda =
+            self.parse_expression(diagnostics, is_end)?.map(|lambda_body| {
+                let mut expr = lambda_body;
+                for param in params.into_iter().rev() {
+                    expr =
+                        Expr::Lambda { parameter: param, body: Box::new(expr) };
+                }
 
-            expr
-        });
+                expr
+            });
 
         Ok(lambda)
     }
 
-    fn parse_param(&mut self) -> Result<Option<Symbol>, Abort> {
-        let token = self.require_current()?;
+    fn parse_param(
+        &mut self,
+        diagnostics: &mut Diagnostics,
+    ) -> Result<Option<Symbol>, Abort> {
+        let token = self.require_current(diagnostics)?;
 
         if token.token_type == TokenType::Identifier {
             Ok(Some(Symbol {
@@ -258,8 +329,12 @@ impl Parser {
             }))
         } else {
             let expected_types = vec![TokenType::Identifier];
-            //error: IdentifierExpected/UnexpectedToken
-            todo!()
+            diagnostics.raise(Error::new(
+                UnexpectedToken { expected_types },
+                token.span,
+            ));
+
+            Ok(None)
         }
     }
 }

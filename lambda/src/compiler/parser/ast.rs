@@ -12,7 +12,7 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
     pub main_expression: Expr,
-    pub bindings: IndexMap<String, Binding>,
+    pub bindings: Vec<Binding>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
