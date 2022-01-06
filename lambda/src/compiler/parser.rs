@@ -13,7 +13,7 @@ pub fn parse(
     tokens: Vec<Token>,
     diagnostics: &mut Diagnostics,
 ) -> Option<Program> {
-    todo!()
+    Parser::new(tokens).parse_program().ok().flatten()
 }
 
 #[derive(Debug)]
@@ -103,7 +103,8 @@ impl Parser {
             IndexMap::new()
         };
 
-        let main_expr_opt = self.parse_expression()?;
+        let main_expr_opt =
+            self.parse_expression(|token_type| token_type == None)?;
         Ok(main_expr_opt
             .map(|main_expression| Program { main_expression, bindings }))
     }
@@ -128,7 +129,10 @@ impl Parser {
         let name_opt = self.parse_binding_name()?;
 
         self.expect(TokenType::Equal)?;
-        let expression_opt = self.parse_expression()?;
+        let expression_opt = self.parse_expression(|token_type| {
+            token_type == Some(TokenType::In)
+                || token_type == Some(TokenType::Semicolon)
+        })?;
 
         Ok(name_opt
             .zip(expression_opt)
@@ -150,11 +154,17 @@ impl Parser {
         }
     }
 
-    fn parse_expression(&mut self) -> Result<Option<Expr>, Abort> {
+    fn parse_expression<F>(
+        &mut self,
+        mut is_end: F,
+    ) -> Result<Option<Expr>, Abort>
+    where
+        F: FnMut(Option<TokenType>) -> bool,
+    {
         let mut curr_expr: Option<Expr> = None;
 
         // a condição de parada vai ser algum tokentype tipo In ou Semicolon ou entao EOF
-        loop {
+        while !is_end(self.current().map(|token| token.token_type)) {
             let token = self.require_current()?;
 
             match token.token_type {
@@ -172,17 +182,24 @@ impl Parser {
                     self.stack_exprs(&mut curr_expr, ident);
                 }
                 TokenType::Lambda => {
-                    if let Some(lambda) = self.parse_lambda()? {
+                    if let Some(lambda) = self.parse_lambda(&mut is_end)? {
                         self.stack_exprs(&mut curr_expr, lambda);
                     }
                 }
                 TokenType::OpenParen => {
                     self.next();
 
-                    if let Some(sub_expr) = self.parse_expression()? {
+                    if let Some(sub_expr) =
+                        self.parse_expression(|token_type| {
+                            token_type == Some(TokenType::CloseParen)
+                        })?
+                    {
                         self.stack_exprs(&mut curr_expr, sub_expr);
                         self.next();
                     }
+                }
+                TokenType::CloseParen => {
+                    // erro
                 }
                 _ => {
                     // erro
@@ -203,7 +220,10 @@ impl Parser {
         }
     }
 
-    fn parse_lambda(&mut self) -> Result<Option<Expr>, Abort> {
+    fn parse_lambda<F>(&mut self, is_end: F) -> Result<Option<Expr>, Abort>
+    where
+        F: FnMut(Option<TokenType>) -> bool,
+    {
         self.expect(TokenType::Lambda)?;
 
         let mut params = Vec::new();
@@ -216,7 +236,7 @@ impl Parser {
         }
 
         // corpo da expressão lambda
-        let lambda = self.parse_expression()?.map(|lambda_body| {
+        let lambda = self.parse_expression(is_end)?.map(|lambda_body| {
             let mut expr = lambda_body;
             for param in params.into_iter().rev() {
                 expr = Expr::Lambda { parameter: param, body: Box::new(expr) };
