@@ -73,3 +73,14 @@ impl fmt::Display for UnmatchedCloseParen {
 }
 
 impl Error for UnmatchedCloseParen {}
+
+#[derive(Debug, Clone)]
+pub struct EmptyExpression;
+
+impl fmt::Display for EmptyExpression {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "Esperava-se uma expressão")
+    }
+}
+
+impl Error for EmptyExpression {}

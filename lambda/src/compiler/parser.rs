@@ -5,8 +5,8 @@ use super::error::{Diagnostics, Error};
 use crate::compiler::lexer::token::{Token, TokenType};
 use ast::{Binding, Expr, Program, Symbol};
 use error::{
-    UnexpectedEndOfInput, UnexpectedToken, UnmatchedCloseParen,
-    UnmatchedOpenParen,
+    EmptyExpression, UnexpectedEndOfInput, UnexpectedToken,
+    UnmatchedCloseParen, UnmatchedOpenParen,
 };
 
 /// Cria uma estrutura Parser e parsa a lista de tokens para um programa
@@ -64,6 +64,12 @@ impl Parser {
     /// Incrementa o índice para o próximo token
     fn next(&mut self) {
         self.curr_token += 1;
+    }
+
+    fn previous(&self) -> Option<&Token> {
+        self.curr_token
+            .checked_sub(1)
+            .map(|token_index| &self.tokens[token_index])
     }
 
     /// Confere se o próximo token é do tipo esperado, adicionando erro no diagnóstico quando não for
@@ -198,10 +204,12 @@ impl Parser {
         F: FnMut(Option<TokenType>) -> bool,
     {
         let mut curr_expr: Option<Expr> = None;
+        let mut is_empty = true;
 
         // a condição de parada vai ser algum tokentype tipo In ou Semicolon ou entao EOF
         while !is_end(self.current().map(|token| token.token_type)) {
             let token = self.require_current(diagnostics)?;
+            is_empty = false;
 
             match token.token_type {
                 TokenType::Number => {
@@ -269,7 +277,16 @@ impl Parser {
             }
         }
 
-        Ok(curr_expr) // REVISAR ERRO
+        if is_empty {
+            let error = match self.previous() {
+                Some(token) => Error::new(EmptyExpression, token.span),
+                None => Error::with_no_span(EmptyExpression),
+            };
+
+            diagnostics.raise(error);
+        }
+
+        Ok(curr_expr)
     }
 
     fn stack_exprs(&self, curr_expr: &mut Option<Expr>, new_expr: Expr) {
