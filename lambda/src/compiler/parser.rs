@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod test;
+
 pub mod ast;
 pub mod error;
 
@@ -131,7 +134,9 @@ impl Parser {
         };
 
         let main_expr_opt = self
-            .parse_expression(diagnostics, |token_type| token_type == None)?;
+            .parse_expression(diagnostics, &mut |token_type| {
+                token_type == None
+            })?;
         Ok(main_expr_opt
             .map(|main_expression| Program { main_expression, bindings }))
     }
@@ -163,7 +168,7 @@ impl Parser {
 
         self.expect(TokenType::Equal, diagnostics)?;
         let expression_opt =
-            self.parse_expression(diagnostics, |token_type| {
+            self.parse_expression(diagnostics, &mut |token_type| {
                 token_type == Some(TokenType::In)
                     || token_type == Some(TokenType::Semicolon)
             })?;
@@ -198,10 +203,10 @@ impl Parser {
     fn parse_expression<F>(
         &mut self,
         diagnostics: &mut Diagnostics,
-        mut is_end: F,
+        is_end: &mut F,
     ) -> Result<Option<Expr>, Abort>
     where
-        F: FnMut(Option<TokenType>) -> bool,
+        F: FnMut(Option<TokenType>) -> bool + ?Sized,
     {
         let mut curr_expr: Option<Expr> = None;
         let mut is_empty = true;
@@ -227,7 +232,7 @@ impl Parser {
                 }
                 TokenType::Lambda => {
                     if let Some(lambda) =
-                        self.parse_lambda(diagnostics, &mut is_end)?
+                        self.parse_lambda(diagnostics, is_end)?
                     {
                         self.stack_exprs(&mut curr_expr, lambda);
                     }
@@ -236,8 +241,8 @@ impl Parser {
                     let span = token.span;
                     self.next();
 
-                    if let Some(sub_expr) = self
-                        .parse_expression(diagnostics, |token_type| {
+                    if let Some(sub_expr) =
+                        self.parse_expression(diagnostics, &mut |token_type| {
                             token_type == Some(TokenType::CloseParen)
                         })?
                     {
@@ -302,10 +307,10 @@ impl Parser {
     fn parse_lambda<F>(
         &mut self,
         diagnostics: &mut Diagnostics,
-        is_end: F,
+        is_end: &mut F,
     ) -> Result<Option<Expr>, Abort>
     where
-        F: FnMut(Option<TokenType>) -> bool,
+        F: FnMut(Option<TokenType>) -> bool + ?Sized,
     {
         self.expect(TokenType::Lambda, diagnostics)?;
 
