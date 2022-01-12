@@ -24,16 +24,15 @@ pub fn parse(
 }
 
 trait ExprEnd {
-    fn is_end(&self, token_type: Option<TokenType>) -> bool;
+    fn is_end(&self, token_type: TokenType) -> bool;
 }
 
 #[derive(Clone, Copy, Debug)]
 struct BindingEnd;
 
 impl ExprEnd for BindingEnd {
-    fn is_end(&self, token_type: Option<TokenType>) -> bool {
-        token_type == Some(TokenType::In)
-            || token_type == Some(TokenType::Semicolon)
+    fn is_end(&self, token_type: TokenType) -> bool {
+        token_type == TokenType::In || token_type == TokenType::Semicolon
     }
 }
 
@@ -41,8 +40,8 @@ impl ExprEnd for BindingEnd {
 struct MainEnd;
 
 impl ExprEnd for MainEnd {
-    fn is_end(&self, token_type: Option<TokenType>) -> bool {
-        token_type == None
+    fn is_end(&self, _token_type: TokenType) -> bool {
+        false
     }
 }
 
@@ -50,8 +49,8 @@ impl ExprEnd for MainEnd {
 struct ParenEnd;
 
 impl ExprEnd for ParenEnd {
-    fn is_end(&self, token_type: Option<TokenType>) -> bool {
-        token_type == Some(TokenType::CloseParen)
+    fn is_end(&self, token_type: TokenType) -> bool {
+        token_type == TokenType::CloseParen
     }
 }
 
@@ -237,8 +236,14 @@ impl Parser {
         let mut is_empty = true;
 
         // a condição de parada vai ser algum tokentype tipo In ou Semicolon ou entao EOF
-        while !expr_end.is_end(self.current().map(|token| token.token_type)) {
-            let token = self.require_current(diagnostics)?;
+        loop {
+            let token = match self.current() {
+                Some(token) if expr_end.is_end(token.token_type) => break,
+                None => break,
+
+                Some(token) => token,
+            };
+
             is_empty = false;
 
             match token.token_type {
