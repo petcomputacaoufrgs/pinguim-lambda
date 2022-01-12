@@ -244,24 +244,30 @@ impl Parser {
             match token.token_type {
                 TokenType::Number => {
                     let number = Expr::Number(token.content.parse().unwrap());
-
                     self.stack_exprs(&mut curr_expr, number);
+                    self.next();
                 }
+
                 TokenType::Identifier => {
                     let ident = Expr::Variable(Symbol {
                         content: token.content.clone(),
                         span: token.span,
                     });
-
                     self.stack_exprs(&mut curr_expr, ident);
+                    self.next();
                 }
+
                 TokenType::Lambda => {
                     if let Some(lambda) =
                         self.parse_lambda(diagnostics, expr_end)?
                     {
                         self.stack_exprs(&mut curr_expr, lambda);
                     }
+                    // Não precisa de .next() porque um Lambda vai até o final
+                    // de uma expressão chamando o parse_expression para parsear
+                    // o body do Lambda.
                 }
+
                 TokenType::OpenParen => {
                     let span = token.span;
                     self.next();
@@ -286,9 +292,11 @@ impl Parser {
                         }
                     }
                 }
+
                 TokenType::CloseParen => {
                     diagnostics
                         .raise(Error::new(UnmatchedCloseParen, token.span));
+                    self.next();
                 }
                 _ => {
                     let expected_types = vec![
@@ -301,6 +309,7 @@ impl Parser {
                         UnexpectedToken { expected_types },
                         token.span,
                     ));
+                    self.next();
                 }
             }
         }
