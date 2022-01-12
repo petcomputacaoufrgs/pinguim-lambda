@@ -1,5 +1,17 @@
 use crate::compiler::position::Span;
-use indexmap::IndexMap;
+
+// <program> ::=
+//      | <let> <bindings> <in> <expr>
+//      | <expr>
+//
+// // repete
+// <bindings> ::= <var> = <expr> ;
+//
+// <expr> ::=
+//      | <var>
+//      | <expr> <expr>
+//      | \<var>. <expr>
+//      | (<expr>)
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Expr {

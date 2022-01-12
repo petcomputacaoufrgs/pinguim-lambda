@@ -23,34 +23,61 @@ pub fn parse(
     Parser::new(tokens).parse_program(diagnostics).ok().flatten()
 }
 
-trait ExprEnd {
-    fn is_end(&self, token_type: TokenType) -> bool;
+// main e binding são os dois únicos contextos externos da gramática onde uma
+// expressão aparece.
+//
+// Com contexto "externo" queremos dizer que ela não aparece dentro de outra
+// expressão na gramática.
+//
+// Exemplo:
+//
+//  let
+//      id = \x.x ;
+//      two = \f x. f (f x) ;
+//  in
+//      id (two (two two))
+//
+//  `\x.x` é uma expressão externa
+//
+//  `\f x. f (f x)` é uma expressão externa
+//
+//  `(f x)` é uma expressão interna
+//
+//  `id (two (two two))` é uma expressão externa
+//
+//  `(two (two two))` é uma expressão interna
+//
+//  `(two two)` é uma expressão interna
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum ExprEndType {
+    Main,
+    Binding,
 }
 
-#[derive(Clone, Copy, Debug)]
-struct BindingEnd;
+impl ExprEndType {
+    fn test(self, token_type: TokenType) -> bool {
+        match self {
+            ExprEndType::Main => false,
 
-impl ExprEnd for BindingEnd {
-    fn is_end(&self, token_type: TokenType) -> bool {
-        token_type == TokenType::In || token_type == TokenType::Semicolon
+            ExprEndType::Binding => {
+                token_type == TokenType::In
+                    || token_type == TokenType::Semicolon
+            }
+        }
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct MainEnd;
-
-impl ExprEnd for MainEnd {
-    fn is_end(&self, _token_type: TokenType) -> bool {
-        false
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct ExprEnd {
+    end_type: ExprEndType,
+    // Parentêsis só ocorrem em expressões internas.
+    parenthesized: bool,
 }
 
-#[derive(Clone, Copy, Debug)]
-struct ParenEnd;
-
-impl ExprEnd for ParenEnd {
-    fn is_end(&self, token_type: TokenType) -> bool {
-        token_type == TokenType::CloseParen
+impl ExprEnd {
+    fn test(self, token_type: TokenType) -> bool {
+        self.end_type.test(token_type)
+            || (self.parenthesized && token_type == TokenType::CloseParen)
     }
 }
 
@@ -164,7 +191,9 @@ impl Parser {
             Vec::new()
         };
 
-        let main_expr_opt = self.parse_expression(diagnostics, &MainEnd)?;
+        let expr_end =
+            ExprEnd { end_type: ExprEndType::Main, parenthesized: false };
+        let main_expr_opt = self.parse_expression(diagnostics, expr_end)?;
         Ok(main_expr_opt
             .map(|main_expression| Program { main_expression, bindings }))
     }
@@ -195,7 +224,9 @@ impl Parser {
         let name_opt = self.parse_binding_name(diagnostics)?;
 
         self.expect(TokenType::Equal, diagnostics)?;
-        let expression_opt = self.parse_expression(diagnostics, &BindingEnd)?;
+        let expr_end =
+            ExprEnd { end_type: ExprEndType::Binding, parenthesized: false };
+        let expression_opt = self.parse_expression(diagnostics, expr_end)?;
 
         Ok(name_opt
             .zip(expression_opt)
@@ -224,21 +255,18 @@ impl Parser {
         }
     }
 
-    fn parse_expression<E>(
+    fn parse_expression(
         &mut self,
         diagnostics: &mut Diagnostics,
-        expr_end: &E,
-    ) -> Result<Option<Expr>, Abort>
-    where
-        E: ExprEnd + ?Sized,
-    {
+        expr_end: ExprEnd,
+    ) -> Result<Option<Expr>, Abort> {
         let mut curr_expr: Option<Expr> = None;
         let mut is_empty = true;
 
         // a condição de parada vai ser algum tokentype tipo In ou Semicolon ou entao EOF
         loop {
             let token = match self.current() {
-                Some(token) if expr_end.is_end(token.token_type) => break,
+                Some(token) if expr_end.test(token.token_type) => break,
                 None => break,
 
                 Some(token) => token,
@@ -277,8 +305,11 @@ impl Parser {
                     let span = token.span;
                     self.next();
 
+                    let sub_expr_end =
+                        ExprEnd { parenthesized: true, ..expr_end };
+
                     if let Some(sub_expr) =
-                        self.parse_expression(diagnostics, &ParenEnd)?
+                        self.parse_expression(diagnostics, sub_expr_end)?
                     {
                         self.stack_exprs(&mut curr_expr, sub_expr);
                         match self.current() {
@@ -341,14 +372,11 @@ impl Parser {
         }
     }
 
-    fn parse_lambda<E>(
+    fn parse_lambda(
         &mut self,
         diagnostics: &mut Diagnostics,
-        expr_end: &E,
-    ) -> Result<Option<Expr>, Abort>
-    where
-        E: ExprEnd + ?Sized,
-    {
+        expr_end: ExprEnd,
+    ) -> Result<Option<Expr>, Abort> {
         self.expect(TokenType::Lambda, diagnostics)?;
 
         let mut params = Vec::new();
