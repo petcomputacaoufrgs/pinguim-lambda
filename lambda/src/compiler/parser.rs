@@ -23,6 +23,38 @@ pub fn parse(
     Parser::new(tokens).parse_program(diagnostics).ok().flatten()
 }
 
+trait ExprEnd {
+    fn is_end(&self, token_type: Option<TokenType>) -> bool;
+}
+
+#[derive(Clone, Copy, Debug)]
+struct BindingEnd;
+
+impl ExprEnd for BindingEnd {
+    fn is_end(&self, token_type: Option<TokenType>) -> bool {
+        token_type == Some(TokenType::In)
+            || token_type == Some(TokenType::Semicolon)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct MainEnd;
+
+impl ExprEnd for MainEnd {
+    fn is_end(&self, token_type: Option<TokenType>) -> bool {
+        token_type == None
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct ParenEnd;
+
+impl ExprEnd for ParenEnd {
+    fn is_end(&self, token_type: Option<TokenType>) -> bool {
+        token_type == Some(TokenType::CloseParen)
+    }
+}
+
 #[derive(Debug)]
 /// Estrutura responsável por parar o parser em situações críticas
 struct Abort;
@@ -133,10 +165,7 @@ impl Parser {
             Vec::new()
         };
 
-        let main_expr_opt = self
-            .parse_expression(diagnostics, &mut |token_type| {
-                token_type == None
-            })?;
+        let main_expr_opt = self.parse_expression(diagnostics, &MainEnd)?;
         Ok(main_expr_opt
             .map(|main_expression| Program { main_expression, bindings }))
     }
@@ -167,11 +196,7 @@ impl Parser {
         let name_opt = self.parse_binding_name(diagnostics)?;
 
         self.expect(TokenType::Equal, diagnostics)?;
-        let expression_opt =
-            self.parse_expression(diagnostics, &mut |token_type| {
-                token_type == Some(TokenType::In)
-                    || token_type == Some(TokenType::Semicolon)
-            })?;
+        let expression_opt = self.parse_expression(diagnostics, &BindingEnd)?;
 
         Ok(name_opt
             .zip(expression_opt)
@@ -200,19 +225,19 @@ impl Parser {
         }
     }
 
-    fn parse_expression<F>(
+    fn parse_expression<E>(
         &mut self,
         diagnostics: &mut Diagnostics,
-        is_end: &mut F,
+        expr_end: &E,
     ) -> Result<Option<Expr>, Abort>
     where
-        F: FnMut(Option<TokenType>) -> bool + ?Sized,
+        E: ExprEnd + ?Sized,
     {
         let mut curr_expr: Option<Expr> = None;
         let mut is_empty = true;
 
         // a condição de parada vai ser algum tokentype tipo In ou Semicolon ou entao EOF
-        while !is_end(self.current().map(|token| token.token_type)) {
+        while !expr_end.is_end(self.current().map(|token| token.token_type)) {
             let token = self.require_current(diagnostics)?;
             is_empty = false;
 
@@ -232,7 +257,7 @@ impl Parser {
                 }
                 TokenType::Lambda => {
                     if let Some(lambda) =
-                        self.parse_lambda(diagnostics, is_end)?
+                        self.parse_lambda(diagnostics, expr_end)?
                     {
                         self.stack_exprs(&mut curr_expr, lambda);
                     }
@@ -242,9 +267,7 @@ impl Parser {
                     self.next();
 
                     if let Some(sub_expr) =
-                        self.parse_expression(diagnostics, &mut |token_type| {
-                            token_type == Some(TokenType::CloseParen)
-                        })?
+                        self.parse_expression(diagnostics, &ParenEnd)?
                     {
                         self.stack_exprs(&mut curr_expr, sub_expr);
                         match self.current() {
@@ -304,13 +327,13 @@ impl Parser {
         }
     }
 
-    fn parse_lambda<F>(
+    fn parse_lambda<E>(
         &mut self,
         diagnostics: &mut Diagnostics,
-        is_end: &mut F,
+        expr_end: &E,
     ) -> Result<Option<Expr>, Abort>
     where
-        F: FnMut(Option<TokenType>) -> bool + ?Sized,
+        E: ExprEnd + ?Sized,
     {
         self.expect(TokenType::Lambda, diagnostics)?;
 
@@ -325,7 +348,7 @@ impl Parser {
 
         // corpo da expressão lambda
         let lambda =
-            self.parse_expression(diagnostics, is_end)?.map(|lambda_body| {
+            self.parse_expression(diagnostics, expr_end)?.map(|lambda_body| {
                 let mut expr = lambda_body;
                 for param in params.into_iter().rev() {
                     expr =
