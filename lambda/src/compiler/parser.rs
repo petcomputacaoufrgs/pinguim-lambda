@@ -240,10 +240,10 @@ impl Parser {
         let token = self.require_current(diagnostics)?;
 
         if token.token_type == TokenType::Identifier {
-            Ok(Some(Symbol {
-                content: token.content.clone(),
-                span: token.span,
-            }))
+            let symbol =
+                Symbol { content: token.content.clone(), span: token.span };
+            self.next();
+            Ok(Some(symbol))
         } else {
             let expected_types = vec![TokenType::Identifier];
             diagnostics.raise(Error::new(
