@@ -122,6 +122,118 @@ fn parse_lambda() {
 }
 
 #[test]
+fn parse_lambda_with_many_params() {
+    let source_code = "\\foo1 foo2 foo3. bar";
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(source_code, &mut diagnostics);
+    let ast = parse(tokens, &mut diagnostics);
+
+    assert!(diagnostics.is_ok());
+    assert_eq!(
+        ast,
+        Some(ast::Program {
+            main_expression: ast::Expr::Lambda {
+                parameter: ast::Symbol {
+                    content: String::from("foo1"),
+                    span: Span {
+                        start: Position {
+                            line: 1,
+                            column: 2,
+                            utf8_index: 1,
+                            utf16_index: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 6,
+                            utf8_index: 5,
+                            utf16_index: 5,
+                        }
+                    }
+                },
+
+                body: Box::new(ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("foo2"),
+                        span: Span {
+                            start: Position {
+                                line: 1,
+                                column: 7,
+                                utf8_index: 6,
+                                utf16_index: 6,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 11,
+                                utf8_index: 10,
+                                utf16_index: 10,
+                            }
+                        }
+                    },
+
+                    body: Box::new(ast::Expr::Lambda {
+                        parameter: ast::Symbol {
+                            content: String::from("foo3"),
+                            span: Span {
+                                start: Position {
+                                    line: 1,
+                                    column: 12,
+                                    utf8_index: 11,
+                                    utf16_index: 11,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 16,
+                                    utf8_index: 15,
+                                    utf16_index: 15,
+                                }
+                            }
+                        },
+
+                        body: Box::new(ast::Expr::Variable(ast::Symbol {
+                            content: String::from("bar"),
+                            span: Span {
+                                start: Position {
+                                    line: 1,
+                                    column: 18,
+                                    utf8_index: 17,
+                                    utf16_index: 17,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 21,
+                                    utf8_index: 20,
+                                    utf16_index: 20,
+                                }
+                            }
+                        }))
+                    })
+                })
+            },
+            bindings: Vec::new()
+        })
+    )
+}
+
+/*
+ast::Expr::Variable(ast::Symbol {
+                    content: String::from("bar"),
+                    span: Span {
+                        start: Position {
+                            line: 1,
+                            column: 7,
+                            utf8_index: 6,
+                            utf16_index: 6,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 10,
+                            utf8_index: 9,
+                            utf16_index: 9,
+                        }
+                    }
+*/
+
+#[test]
 fn parse_app() {
     let source_code = "fun arg0 arg1";
     let mut diagnostics = Diagnostics::new();
