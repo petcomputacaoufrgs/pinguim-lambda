@@ -8,8 +8,8 @@ use super::error::{Diagnostics, Error};
 use crate::compiler::lexer::token::{Token, TokenType};
 use ast::{Binding, Expr, Program, Symbol};
 use error::{
-    EmptyExpression, UnexpectedEndOfInput, UnexpectedToken,
-    UnmatchedCloseParen, UnmatchedOpenParen,
+    EmptyExpression, LambdaWithoutParams, UnexpectedEndOfInput,
+    UnexpectedToken, UnmatchedCloseParen, UnmatchedOpenParen,
 };
 
 /// Cria uma estrutura Parser e parsa a lista de tokens para um programa
@@ -377,7 +377,17 @@ impl Parser {
         diagnostics: &mut Diagnostics,
         expr_end: ExprEnd,
     ) -> Result<Option<Expr>, Abort> {
-        self.expect(TokenType::Lambda, diagnostics)?;
+        let token = self.require_current(diagnostics)?;
+        let lambda_span = token.span;
+
+        if token.token_type != TokenType::Lambda {
+            diagnostics.raise(Error::new(
+                UnexpectedToken { expected_types: vec![TokenType::Lambda] },
+                lambda_span,
+            ));
+        }
+
+        self.next();
 
         let mut params = Vec::new();
 
@@ -388,6 +398,10 @@ impl Parser {
             } else {
                 self.next();
             }
+        }
+
+        if params.is_empty() {
+            diagnostics.raise(Error::new(LambdaWithoutParams, lambda_span));
         }
 
         // corpo da expressão lambda

@@ -84,3 +84,14 @@ impl fmt::Display for EmptyExpression {
 }
 
 impl Error for EmptyExpression {}
+
+#[derive(Debug, Clone)]
+pub struct LambdaWithoutParams;
+
+impl fmt::Display for LambdaWithoutParams {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "Lambda precisa ter pelo menos um parâmetro")
+    }
+}
+
+impl Error for LambdaWithoutParams {}
