@@ -977,316 +977,436 @@ fn parse_with_one_binding_no_semicolon() {
 
 #[test]
 fn parse_with_many_bindings() {
-    let source_code = "let\nsucc = \\n. \\f x. n f (f x);\nadd = \\m n. m succ n;\nmul = \\m n. m (add n) 0;\n\nin\nmul 3 5";
+    let source_code = "let\nsucc = \\n. \\f x. n f (f x);\nadd = \\m n. m succ n;\nmul = \\m n. m (add n) 0;\nin\nmul 3 5";
     let mut diagnostics = Diagnostics::new();
     let tokens = generate_tokens(source_code, &mut diagnostics);
     let ast = parse(tokens, &mut diagnostics);
-
-    assert!(diagnostics.is_ok());
-    assert_eq!(
-        ast,
-        Some(ast::Program {
-            bindings: vec![
-                ast::Binding {
-                    name: ast::Symbol {
-                        content: String::from("succ"),
-                        span: Span {
-                            start: Position {
-                                line: 2,
-                                column: 1,
-                                utf8_index: 4,
-                                utf16_index: 4,
-                            },
-                            end: Position {
-                                line: 2,
-                                column: 5,
-                                utf8_index: 8,
-                                utf16_index: 8,
-                            }
-                        }
-                    },
-                    expression: ast::Expr::Lambda {
-                        parameter: ast::Symbol {
-                            content: String::from("n"),
-                            span: Span {
-                                start: Position {
-                                    line: 2,
-                                    column: 9,
-                                    utf8_index: 12,
-                                    utf16_index: 12,
-                                },
-                                end: Position {
-                                    line: 2,
-                                    column: 10,
-                                    utf8_index: 13,
-                                    utf16_index: 13,
-                                }
-                            }
+    let expected_ast = ast::Program {
+        bindings: vec![
+            ast::Binding {
+                name: ast::Symbol {
+                    content: String::from("succ"),
+                    span: Span {
+                        start: Position {
+                            line: 2,
+                            column: 1,
+                            utf8_index: 4,
+                            utf16_index: 4,
                         },
-                        body: Box::new(ast::Expr::Lambda {
-                            parameter: ast::Symbol {
-                                content: String::from("f"),
-                                span: Span {
-                                    start: Position {
-                                        line: 2,
-                                        column: 13,
-                                        utf8_index: 16,
-                                        utf16_index: 16,
-                                    },
-                                    end: Position {
-                                        line: 2,
-                                        column: 14,
-                                        utf8_index: 17,
-                                        utf16_index: 17,
-                                    }
-                                }
-                            },
-                            body: Box::new(ast::Expr::Lambda {
-                                parameter: ast::Symbol {
-                                    content: String::from("x"),
-                                    span: Span {
-                                        start: Position {
-                                            line: 2,
-                                            column: 15,
-                                            utf8_index: 18,
-                                            utf16_index: 18,
-                                        },
-                                        end: Position {
-                                            line: 2,
-                                            column: 16,
-                                            utf8_index: 19,
-                                            utf16_index: 19,
-                                        }
-                                    }
-                                },
-                                body: Box::new(ast::Expr::Application {
-                                    function: Box::new(
-                                        ast::Expr::Application {
-                                            function: Box::new(
-                                                ast::Expr::Variable(
-                                                    ast::Symbol {
-                                                        content: String::from(
-                                                            "n"
-                                                        ),
-                                                        span: Span {
-                                                            start: Position {
-                                                                line: 2,
-                                                                column: 18,
-                                                                utf8_index: 21,
-                                                                utf16_index: 21,
-                                                            },
-                                                            end: Position {
-                                                                line: 2,
-                                                                column: 19,
-                                                                utf8_index: 22,
-                                                                utf16_index: 22,
-                                                            }
-                                                        }
-                                                    }
-                                                )
-                                            ),
-                                            argument: Box::new(
-                                                ast::Expr::Variable(
-                                                    ast::Symbol {
-                                                        content: String::from(
-                                                            "f"
-                                                        ),
-                                                        span: Span {
-                                                            start: Position {
-                                                                line: 2,
-                                                                column: 20,
-                                                                utf8_index: 23,
-                                                                utf16_index: 23,
-                                                            },
-                                                            end: Position {
-                                                                line: 2,
-                                                                column: 21,
-                                                                utf8_index: 24,
-                                                                utf16_index: 24,
-                                                            }
-                                                        }
-                                                    }
-                                                )
-                                            ),
-                                        }
-                                    ),
-                                    argument: Box::new(
-                                        ast::Expr::Application {
-                                            function: Box::new(
-                                                ast::Expr::Variable(
-                                                    ast::Symbol {
-                                                        content: String::from(
-                                                            "f"
-                                                        ),
-                                                        span: Span {
-                                                            start: Position {
-                                                                line: 2,
-                                                                column: 23,
-                                                                utf8_index: 26,
-                                                                utf16_index: 26,
-                                                            },
-                                                            end: Position {
-                                                                line: 2,
-                                                                column: 24,
-                                                                utf8_index: 27,
-                                                                utf16_index: 27,
-                                                            }
-                                                        }
-                                                    }
-                                                )
-                                            ),
-                                            argument: Box::new(
-                                                ast::Expr::Variable(
-                                                    ast::Symbol {
-                                                        content: String::from(
-                                                            "x"
-                                                        ),
-                                                        span: Span {
-                                                            start: Position {
-                                                                line: 2,
-                                                                column: 25,
-                                                                utf8_index: 28,
-                                                                utf16_index: 28,
-                                                            },
-                                                            end: Position {
-                                                                line: 2,
-                                                                column: 26,
-                                                                utf8_index: 29,
-                                                                utf16_index: 29,
-                                                            }
-                                                        }
-                                                    }
-                                                )
-                                            ),
-                                        }
-                                    ),
-                                }),
-                            }),
-                        })
+                        end: Position {
+                            line: 2,
+                            column: 5,
+                            utf8_index: 8,
+                            utf16_index: 8,
+                        },
                     },
                 },
-                // "let\nsucc = \\n. \\f x. n f (f x);\nadd = \\m n. m succ n;\nmul = \\m n. m (add n) 0;\n\nin\nmul 3 5"
-                // corrigir os positions a partir daqui
-                ast::Binding {
-                    name: ast::Symbol {
-                        content: String::from("add"),
+                expression: ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("n"),
                         span: Span {
                             start: Position {
                                 line: 2,
-                                column: 1,
-                                utf8_index: 4,
-                                utf16_index: 4,
+                                column: 9,
+                                utf8_index: 12,
+                                utf16_index: 12,
                             },
                             end: Position {
                                 line: 2,
-                                column: 5,
-                                utf8_index: 8,
-                                utf16_index: 8,
-                            }
-                        }
+                                column: 10,
+                                utf8_index: 13,
+                                utf16_index: 13,
+                            },
+                        },
                     },
-                    expression: ast::Expr::Lambda {
+                    body: Box::new(ast::Expr::Lambda {
                         parameter: ast::Symbol {
-                            content: String::from("m"),
+                            content: String::from("f"),
                             span: Span {
                                 start: Position {
                                     line: 2,
-                                    column: 1,
-                                    utf8_index: 4,
-                                    utf16_index: 4,
+                                    column: 13,
+                                    utf8_index: 16,
+                                    utf16_index: 16,
                                 },
                                 end: Position {
                                     line: 2,
-                                    column: 5,
-                                    utf8_index: 8,
-                                    utf16_index: 8,
-                                }
-                            }
+                                    column: 14,
+                                    utf8_index: 17,
+                                    utf16_index: 17,
+                                },
+                            },
                         },
                         body: Box::new(ast::Expr::Lambda {
                             parameter: ast::Symbol {
-                                content: String::from("n"),
+                                content: String::from("x"),
                                 span: Span {
                                     start: Position {
                                         line: 2,
-                                        column: 1,
-                                        utf8_index: 4,
-                                        utf16_index: 4,
+                                        column: 15,
+                                        utf8_index: 18,
+                                        utf16_index: 18,
                                     },
                                     end: Position {
                                         line: 2,
-                                        column: 5,
-                                        utf8_index: 8,
-                                        utf16_index: 8,
-                                    }
-                                }
+                                        column: 16,
+                                        utf8_index: 19,
+                                        utf16_index: 19,
+                                    },
+                                },
                             },
                             body: Box::new(ast::Expr::Application {
                                 function: Box::new(ast::Expr::Application {
                                     function: Box::new(ast::Expr::Variable(
                                         ast::Symbol {
-                                            content: String::from("m"),
+                                            content: String::from("n"),
                                             span: Span {
                                                 start: Position {
                                                     line: 2,
-                                                    column: 1,
-                                                    utf8_index: 4,
-                                                    utf16_index: 4,
+                                                    column: 18,
+                                                    utf8_index: 21,
+                                                    utf16_index: 21,
                                                 },
                                                 end: Position {
                                                     line: 2,
-                                                    column: 5,
-                                                    utf8_index: 8,
-                                                    utf16_index: 8,
-                                                }
-                                            }
-                                        }
+                                                    column: 19,
+                                                    utf8_index: 22,
+                                                    utf16_index: 22,
+                                                },
+                                            },
+                                        },
                                     )),
                                     argument: Box::new(ast::Expr::Variable(
                                         ast::Symbol {
-                                            content: String::from("succ"),
+                                            content: String::from("f"),
                                             span: Span {
                                                 start: Position {
                                                     line: 2,
-                                                    column: 1,
-                                                    utf8_index: 4,
-                                                    utf16_index: 4,
+                                                    column: 20,
+                                                    utf8_index: 23,
+                                                    utf16_index: 23,
                                                 },
                                                 end: Position {
                                                     line: 2,
-                                                    column: 5,
-                                                    utf8_index: 8,
-                                                    utf16_index: 8,
-                                                }
-                                            }
-                                        }
+                                                    column: 21,
+                                                    utf8_index: 24,
+                                                    utf16_index: 24,
+                                                },
+                                            },
+                                        },
                                     )),
                                 }),
-                                argument: Box::new(ast::Expr::Variable(
+                                argument: Box::new(ast::Expr::Application {
+                                    function: Box::new(ast::Expr::Variable(
+                                        ast::Symbol {
+                                            content: String::from("f"),
+                                            span: Span {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 23,
+                                                    utf8_index: 26,
+                                                    utf16_index: 26,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 24,
+                                                    utf8_index: 27,
+                                                    utf16_index: 27,
+                                                },
+                                            },
+                                        },
+                                    )),
+                                    argument: Box::new(ast::Expr::Variable(
+                                        ast::Symbol {
+                                            content: String::from("x"),
+                                            span: Span {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 25,
+                                                    utf8_index: 28,
+                                                    utf16_index: 28,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 26,
+                                                    utf8_index: 29,
+                                                    utf16_index: 29,
+                                                },
+                                            },
+                                        },
+                                    )),
+                                }),
+                            }),
+                        }),
+                    }),
+                },
+            },
+            ast::Binding {
+                name: ast::Symbol {
+                    content: String::from("add"),
+                    span: Span {
+                        start: Position {
+                            line: 3,
+                            column: 1,
+                            utf8_index: 32,
+                            utf16_index: 32,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 4,
+                            utf8_index: 35,
+                            utf16_index: 35,
+                        },
+                    },
+                },
+                expression: ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("m"),
+                        span: Span {
+                            start: Position {
+                                line: 3,
+                                column: 8,
+                                utf8_index: 39,
+                                utf16_index: 39,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 9,
+                                utf8_index: 40,
+                                utf16_index: 40,
+                            },
+                        },
+                    },
+                    body: Box::new(ast::Expr::Lambda {
+                        parameter: ast::Symbol {
+                            content: String::from("n"),
+                            span: Span {
+                                start: Position {
+                                    line: 3,
+                                    column: 10,
+                                    utf8_index: 41,
+                                    utf16_index: 41,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 11,
+                                    utf8_index: 42,
+                                    utf16_index: 42,
+                                },
+                            },
+                        },
+                        body: Box::new(ast::Expr::Application {
+                            function: Box::new(ast::Expr::Application {
+                                function: Box::new(ast::Expr::Variable(
                                     ast::Symbol {
-                                        content: String::from("n"),
+                                        content: String::from("m"),
                                         span: Span {
                                             start: Position {
-                                                line: 2,
-                                                column: 1,
-                                                utf8_index: 4,
-                                                utf16_index: 4,
+                                                line: 3,
+                                                column: 13,
+                                                utf8_index: 44,
+                                                utf16_index: 44,
                                             },
                                             end: Position {
-                                                line: 2,
-                                                column: 5,
-                                                utf8_index: 8,
-                                                utf16_index: 8,
-                                            }
-                                        }
-                                    }
-                                ))
-                            })
-                        })
-                    }
-                }
-            ],
-            main_expression: todo!(),
-        }),
-    )
+                                                line: 3,
+                                                column: 14,
+                                                utf8_index: 45,
+                                                utf16_index: 45,
+                                            },
+                                        },
+                                    },
+                                )),
+                                argument: Box::new(ast::Expr::Variable(
+                                    ast::Symbol {
+                                        content: String::from("succ"),
+                                        span: Span {
+                                            start: Position {
+                                                line: 3,
+                                                column: 15,
+                                                utf8_index: 46,
+                                                utf16_index: 46,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 19,
+                                                utf8_index: 50,
+                                                utf16_index: 50,
+                                            },
+                                        },
+                                    },
+                                )),
+                            }),
+                            argument: Box::new(ast::Expr::Variable(
+                                ast::Symbol {
+                                    content: String::from("n"),
+                                    span: Span {
+                                        start: Position {
+                                            line: 3,
+                                            column: 20,
+                                            utf8_index: 51,
+                                            utf16_index: 51,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 21,
+                                            utf8_index: 52,
+                                            utf16_index: 52,
+                                        },
+                                    },
+                                },
+                            )),
+                        }),
+                    }),
+                },
+            },
+            ast::Binding {
+                name: ast::Symbol {
+                    content: String::from("mul"),
+                    span: Span {
+                        start: Position {
+                            line: 4,
+                            column: 1,
+                            utf8_index: 54,
+                            utf16_index: 54,
+                        },
+                        end: Position {
+                            line: 4,
+                            column: 4,
+                            utf8_index: 57,
+                            utf16_index: 57,
+                        },
+                    },
+                },
+                expression: ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("m"),
+                        span: Span {
+                            start: Position {
+                                line: 4,
+                                column: 8,
+                                utf8_index: 61,
+                                utf16_index: 61,
+                            },
+                            end: Position {
+                                line: 4,
+                                column: 9,
+                                utf8_index: 62,
+                                utf16_index: 62,
+                            },
+                        },
+                    },
+                    // "let\nsucc = \\n. \\f x. n f (f x);\nadd = \\m n. m succ n;\nmul = \\m n. m (add n) 0;\nin\nmul 3 5"
+                    body: Box::new(ast::Expr::Lambda {
+                        parameter: ast::Symbol {
+                            content: String::from("n"),
+                            span: Span {
+                                start: Position {
+                                    line: 4,
+                                    column: 10,
+                                    utf8_index: 63,
+                                    utf16_index: 63,
+                                },
+                                end: Position {
+                                    line: 4,
+                                    column: 11,
+                                    utf8_index: 64,
+                                    utf16_index: 64,
+                                },
+                            },
+                        },
+                        body: Box::new(ast::Expr::Application {
+                            function: Box::new(ast::Expr::Application {
+                                function: Box::new(ast::Expr::Variable(
+                                    ast::Symbol {
+                                        content: String::from("m"),
+                                        span: Span {
+                                            start: Position {
+                                                line: 4,
+                                                column: 13,
+                                                utf8_index: 66,
+                                                utf16_index: 66,
+                                            },
+                                            end: Position {
+                                                line: 4,
+                                                column: 14,
+                                                utf8_index: 67,
+                                                utf16_index: 67,
+                                            },
+                                        },
+                                    },
+                                )),
+                                argument: Box::new(ast::Expr::Application {
+                                    function: Box::new(ast::Expr::Variable(
+                                        ast::Symbol {
+                                            content: String::from("add"),
+                                            span: Span {
+                                                start: Position {
+                                                    line: 4,
+                                                    column: 16,
+                                                    utf8_index: 69,
+                                                    utf16_index: 69,
+                                                },
+                                                end: Position {
+                                                    line: 4,
+                                                    column: 19,
+                                                    utf8_index: 72,
+                                                    utf16_index: 72,
+                                                },
+                                            },
+                                        },
+                                    )),
+                                    argument: Box::new(ast::Expr::Variable(
+                                        ast::Symbol {
+                                            content: String::from("n"),
+                                            span: Span {
+                                                start: Position {
+                                                    line: 4,
+                                                    column: 20,
+                                                    utf8_index: 73,
+                                                    utf16_index: 73,
+                                                },
+                                                end: Position {
+                                                    line: 4,
+                                                    column: 21,
+                                                    utf8_index: 74,
+                                                    utf16_index: 74,
+                                                },
+                                            },
+                                        },
+                                    )),
+                                }),
+                            }),
+                            argument: Box::new(ast::Expr::Number(0)),
+                        }),
+                    }),
+                },
+            },
+        ],
+        main_expression: ast::Expr::Application {
+            function: Box::new(ast::Expr::Application {
+                function: Box::new(ast::Expr::Variable(ast::Symbol {
+                    content: String::from("mul"),
+                    span: Span {
+                        start: Position {
+                            line: 6,
+                            column: 1,
+                            utf8_index: 82,
+                            utf16_index: 82,
+                        },
+                        end: Position {
+                            line: 6,
+                            column: 4,
+                            utf8_index: 85,
+                            utf16_index: 85,
+                        },
+                    },
+                })),
+                argument: Box::new(ast::Expr::Number(3)),
+            }),
+            argument: Box::new(ast::Expr::Number(5)),
+        },
+    };
+
+    assert!(diagnostics.is_ok());
+    assert_eq!(ast, Some(expected_ast));
 }
