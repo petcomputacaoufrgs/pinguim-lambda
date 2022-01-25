@@ -144,6 +144,8 @@ impl Value {
     ///       betaEquivWith (Lambda p1 b1) (Lambda p2 b2) ps1 ps2 =
     ///         betaEquivWith b1 b2 (p1 : ps1) (p2 : ps2)
     ///
+    ///       betaEquivWith _ _ ps1 ps2 = False
+    ///
     ///   in betaEquivWith v1 v2 [] []
     /// ```
     pub fn beta_equiv(&self, other: &Value) -> bool {
@@ -555,6 +557,7 @@ impl PartialEq for Value {
     ///   (Variable s1) == (Variable s2) = s1 == s2
     ///   (Application f1 a1) == (Application f2 a2) = f1 == f2 && a1 == a2
     ///   (Lambda p1 b1) == (Lambda p2 b2) = p1 == p2 && b1 == b2
+    ///   _ == _ = False
     /// ```
     fn eq(&self, other: &Self) -> bool {
         let mut equals = true;
