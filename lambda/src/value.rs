@@ -82,7 +82,7 @@ impl Value {
     }
 
     /// Retorna a codificação de church do dado número natural.
-    pub fn church_numeral(number: u64) -> Self {
+    pub fn church_numeral(number: u32) -> Self {
         let mut body = Value::Variable(String::from("x"));
 
         for _ in 0..number {
@@ -149,11 +149,11 @@ impl Value {
                                 argument: other_arg,
                             },
                         ) => {
+                            operation_stack
+                                .push(Operation::Compare(self_arg, other_arg));
                             operation_stack.push(Operation::Compare(
                                 self_func, other_func,
                             ));
-                            operation_stack
-                                .push(Operation::Compare(self_arg, other_arg));
                         }
 
                         (
@@ -191,6 +191,7 @@ impl Value {
                 Operation::PopOtherIndex(param, old_index) => {
                     other_indices.pop(param, old_index);
                 }
+
                 Operation::PopSelfIndex(param, old_index) => {
                     self_indices.pop(param, old_index);
                 }
@@ -203,7 +204,15 @@ impl Value {
     /// Substitui todas as ocorrências da variável `target_var` pelo valor `new_value` dentro de `self`.
     /// Lida com a captura de variáveis.
     ///
-    /// # Captura de variáveis.
+    /// # Exemplo
+    ///
+    /// ```text
+    /// substituir (x) por (f y) em (\a. x x (\x. a))
+    /// =>
+    /// \a. (f y) (f y) (\x. a)
+    /// ```
+    ///
+    /// # Captura de variáveis
     ///
     /// ```text
     /// λa. (λx. λa. x a) a
@@ -314,9 +323,9 @@ impl Value {
 
                     Value::Application { function, argument } => {
                         operation_stack
-                            .push(Operation::Replace(function, soft_size));
-                        operation_stack
                             .push(Operation::Replace(argument, soft_size));
+                        operation_stack
+                            .push(Operation::Replace(function, soft_size));
                     }
 
                     Value::Lambda { parameter, body } => {
@@ -363,6 +372,7 @@ impl Value {
                             ));
                             new_soft_size += 1;
                         }
+
                         operation_stack
                             .push(Operation::Replace(body, new_soft_size));
                     }
@@ -377,7 +387,7 @@ impl Value {
 
     /// Faz a redução de um único redex, mais externo, mais à esquerda. Retorna se tal redex foi encontrado.
     pub fn reduce_one(&mut self) -> bool {
-        let mut candidate_stack = vec![self];
+        let mut candidate_stack: Vec<&mut Value> = vec![self];
         let mut redex_found = false;
 
         while let Some(candidate) =
@@ -398,10 +408,18 @@ impl Value {
                 match candidate {
                     Value::Variable(_) => (),
                     Value::Application { function, argument } => {
+                        // NestedValues automaticamente convertidos para Values
+                        // por conta do auto-deref.
                         candidate_stack.push(argument);
+                        // Pela estratégia normal de avaliação, termos mais à
+                        // esquerda são avaliados antes. A "função" em uma
+                        // aplicação é quem está mais à esquerda (e mais afora),
+                        // logo, precisa-se tentar avaliá-la antes
+                        // (lembra que a pilha inverte).
                         candidate_stack.push(function);
                     }
                     Value::Lambda { parameter: _, body } => {
+                        // Aqui também rola auto-deref.
                         candidate_stack.push(body);
                     }
                 }
@@ -423,12 +441,13 @@ impl Value {
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         let mut equals = true;
+        let mut compare_stack: Vec<(&Self, &Self)> = vec![(self, other)];
 
-        let mut compare_stack = vec![(self, other)];
         while let Some((self_value, other_value)) =
             compare_stack.pop().filter(|_| equals)
         {
             match (self_value, other_value) {
+                // Caso base
                 (Value::Variable(self_var), Value::Variable(other_var)) => {
                     equals = self_var == other_var;
                 }
@@ -443,8 +462,8 @@ impl PartialEq for Value {
                         argument: other_arg,
                     },
                 ) => {
-                    compare_stack.push((self_func, other_func));
                     compare_stack.push((self_arg, other_arg));
+                    compare_stack.push((self_func, other_func));
                 }
 
                 (
@@ -479,15 +498,17 @@ impl Clone for Value {
             MakeApplication,
         }
 
-        let mut operation_stack = vec![Operation::Clone(self)];
-        let mut output_stack = Vec::new();
+        let mut operation_stack: Vec<Operation> = vec![Operation::Clone(self)];
+        let mut output_stack: Vec<Value> = Vec::new();
 
         while let Some(operation) = operation_stack.pop() {
             match operation {
                 Operation::Clone(value) => match value {
+                    // Caso base
                     Value::Variable(variable) => {
                         output_stack.push(Value::Variable(variable.clone()));
                     }
+
                     Value::Application { function, argument } => {
                         operation_stack.push(Operation::MakeApplication);
                         operation_stack.push(Operation::Clone(argument));
@@ -521,6 +542,7 @@ impl Clone for Value {
                 }
             }
         }
+
         output_stack.pop().expect("clone value")
     }
 }
@@ -548,13 +570,19 @@ impl<'value> Iterator for UnboundVars<'value> {
                     }
                     Value::Application { function, argument } => {
                         self.operation_stack
-                            .push(UnboundVarsOper::Visit(function));
-                        self.operation_stack
                             .push(UnboundVarsOper::Visit(argument));
+                        self.operation_stack
+                            .push(UnboundVarsOper::Visit(function));
                     }
                     Value::Lambda { parameter, body } => {
-                        let was_inserted = self.bound_set.insert(parameter);
-                        if was_inserted {
+                        // Múltiplos lambdas, aninhados, com mesmo parâmetro
+                        // tentam inserir o parâmetro mais de uma vez. Mas ele
+                        // só pode ser efetivamente inserido uma única vez,
+                        // assim como só pode ser removido uma vez. Por isso,
+                        // vamos deixar somente para o lambda mais de fora
+                        // remover o parâmetro.
+                        let is_new_element = self.bound_set.insert(parameter);
+                        if is_new_element {
                             self.operation_stack
                                 .push(UnboundVarsOper::RemoveBound(parameter));
                         }
@@ -639,7 +667,9 @@ impl Drop for NestedValue {
 
         while let Some(value) = cur_value.take() {
             match value {
+                // Caso base
                 Value::Variable(_) => (),
+
                 Value::Application { function, argument } => {
                     drop_stack.push(function.into_value());
                     drop_stack.push(argument.into_value());
@@ -654,7 +684,22 @@ impl Drop for NestedValue {
     }
 }
 
-/// Mapeamento de nomes de parâmetros para indices.
+/// Mapeamento de nomes de parâmetros para índices.
+///
+/// Serve para computar índices de De Bruijn de um termo.
+///
+/// Ìndices de De Bruijn:
+///
+/// ```text
+///  4   3   2   1  4 1
+///  |   |   |   |  | |
+///  V   V   V   V  V V
+/// \a. \x. \c. \x. a x
+///
+/// ==>
+///
+/// \. \. \. \. 4 1
+/// ```
 #[derive(Debug, Clone, Default)]
 struct ParamIndices<'value> {
     /// Associação entre nomes de parâmetros e indices.
@@ -696,6 +741,22 @@ impl<'value> ParamIndices<'value> {
     /// Obtém o indice mapeado para aquele nome de parâmetro, se estiver mapeado.
     /// O último parâmetro mapeado terá índice 1, o segundo índice 2, etc...
     pub fn get(&self, param: &'value str) -> Option<u64> {
+        // Como é armazenado:
+        //
+        //  0   1   2   3
+        //  |   |   |   |
+        //  V   V   V   V
+        // \a. \x. \c. \x. x
+        //
+        //
+        // Ìndices de De Bruijn:
+        //
+        //  4   3   2   1  4 1
+        //  |   |   |   |  | |
+        //  V   V   V   V  V V
+        // \a. \x. \c. \x. a x
+        //
+        // Por isso a correção de índice com o .map()
         self.param_map.get(param).copied().map(|index| self.param_count - index)
     }
 }
