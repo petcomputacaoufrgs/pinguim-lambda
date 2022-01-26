@@ -240,3 +240,70 @@ fn beta_equiv_different_vars() {
 
     assert!(left.beta_equiv(&right));
 }
+
+#[test]
+fn successful_church_numeral_to_int() {
+    assert_eq!(Value::church_numeral(0).church_numeral_to_int(), Some(0));
+    assert_eq!(Value::church_numeral(1).church_numeral_to_int(), Some(1));
+    assert_eq!(Value::church_numeral(2).church_numeral_to_int(), Some(2));
+    assert_eq!(Value::church_numeral(3).church_numeral_to_int(), Some(3));
+}
+
+#[test]
+fn failing_variable_to_int() {
+    let target = Value::Variable(String::from("x"));
+    assert_eq!(target.church_numeral_to_int(), None);
+}
+
+#[test]
+fn failing_single_lambda_to_int() {
+    let target = Value::Lambda {
+        parameter: String::from("a"),
+        body: NestedValue::new(Value::Variable(String::from("x"))),
+    };
+    assert_eq!(target.church_numeral_to_int(), None);
+}
+
+#[test]
+fn failing_bad_f_to_int() {
+    let target = Value::Lambda {
+        parameter: String::from("a"),
+        body: NestedValue::new(Value::Lambda {
+            parameter: String::from("b"),
+            body: NestedValue::new(Value::Application {
+                function: NestedValue::new(Value::Variable(String::from("a"))),
+                argument: NestedValue::new(Value::Application {
+                    function: NestedValue::new(Value::Variable(String::from(
+                        "c",
+                    ))),
+                    argument: NestedValue::new(Value::Variable(String::from(
+                        "b",
+                    ))),
+                }),
+            }),
+        }),
+    };
+    assert_eq!(target.church_numeral_to_int(), None);
+}
+
+#[test]
+fn failing_bad_x_to_int() {
+    let target = Value::Lambda {
+        parameter: String::from("a"),
+        body: NestedValue::new(Value::Lambda {
+            parameter: String::from("b"),
+            body: NestedValue::new(Value::Application {
+                function: NestedValue::new(Value::Variable(String::from("a"))),
+                argument: NestedValue::new(Value::Application {
+                    function: NestedValue::new(Value::Variable(String::from(
+                        "a",
+                    ))),
+                    argument: NestedValue::new(Value::Variable(String::from(
+                        "d",
+                    ))),
+                }),
+            }),
+        }),
+    };
+    assert_eq!(target.church_numeral_to_int(), None);
+}
