@@ -119,6 +119,8 @@ impl Value {
         }
     }
 
+    /// Se esse termo for um numeral de church, este método converte o termo para um inteiro do Rust.
+    /// Se não for, o método retorna `None`.
     pub fn church_numeral_to_int(&self) -> Option<u32> {
         let (param_f, param_x, mut body) = match self {
             Value::Lambda { parameter: param_f, body } => match body.as_value()

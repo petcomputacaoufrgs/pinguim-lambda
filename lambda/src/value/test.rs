@@ -251,12 +251,14 @@ fn successful_church_numeral_to_int() {
 
 #[test]
 fn failing_variable_to_int() {
+    // x
     let target = Value::Variable(String::from("x"));
     assert_eq!(target.church_numeral_to_int(), None);
 }
 
 #[test]
 fn failing_single_lambda_to_int() {
+    // λa. x
     let target = Value::Lambda {
         parameter: String::from("a"),
         body: NestedValue::new(Value::Variable(String::from("x"))),
@@ -266,6 +268,7 @@ fn failing_single_lambda_to_int() {
 
 #[test]
 fn failing_bad_f_to_int() {
+    // λa. λb. a (c b)
     let target = Value::Lambda {
         parameter: String::from("a"),
         body: NestedValue::new(Value::Lambda {
@@ -288,6 +291,7 @@ fn failing_bad_f_to_int() {
 
 #[test]
 fn failing_bad_x_to_int() {
+    // λa. λb. a (a c)
     let target = Value::Lambda {
         parameter: String::from("a"),
         body: NestedValue::new(Value::Lambda {
@@ -299,7 +303,7 @@ fn failing_bad_x_to_int() {
                         "a",
                     ))),
                     argument: NestedValue::new(Value::Variable(String::from(
-                        "d",
+                        "c",
                     ))),
                 }),
             }),
