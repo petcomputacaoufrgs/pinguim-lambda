@@ -121,6 +121,28 @@ impl Value {
 
     /// Se esse termo for um numeral de church, este método converte o termo para um inteiro do Rust.
     /// Se não for, o método retorna `None`.
+    ///
+    /// # Algoritmo Recursivo
+    ///
+    /// ```haskell
+    /// churchNumToInt :: Value -> Maybe Int
+    ///
+    /// churchNumToInt (Lambda pf (Lambda px b)) =
+    ///   let checkBody (Application (Variable f) a) =
+    ///         if f == pf
+    ///           then case checkBody a of
+    ///             Just n -> Just (n + 1)
+    ///             Nothing -> Nothing
+    ///           else Nothing
+    ///       checkBody (Variable s) =
+    ///         if s == px
+    ///           then Just 0
+    ///           else Nothing
+    ///       checkBody _ = Nothing
+    ///   in checkBody b
+    ///
+    /// churchNumToInt _ = Nothing
+    /// ```
     pub fn church_numeral_to_int(&self) -> Option<u32> {
         let (param_f, param_x, mut body) = match self {
             Value::Lambda { parameter: param_f, body } => match body.as_value()

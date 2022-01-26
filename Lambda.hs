@@ -81,6 +81,23 @@ churchNum n =
       body m = Application (Variable "f") (body (m - 1))
   in Lambda "f" (Lambda "x" (body n))
 
+churchNumToInt :: Value -> Maybe Int
+
+churchNumToInt (Lambda pf (Lambda px b)) =
+  let checkBody (Application (Variable f) a) =
+        if f == pf
+          then case checkBody a of
+            Just n -> Just (n + 1)
+            Nothing -> Nothing
+          else Nothing
+      checkBody (Variable s) =
+        if s == px
+          then Just 0
+          else Nothing
+      checkBody _ = Nothing
+  in checkBody b
+
+churchNumToInt _ = Nothing
 
 unboundVars :: Value -> [String]
 unboundVars v =
