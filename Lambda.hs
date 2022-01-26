@@ -1,16 +1,30 @@
-module Lambda () where
+module Lambda
+  ( Value(..)
+  , toCode
+  , clone
+  , betaEquiv
+  , churchNum
+  , unboundVars
+  , replace
+  , reduceOne
+  , reduceN
+  , reduceToNormal
+  ) where
   
+
 data Value =
     Variable String
   | Application Value Value
   | Lambda String Value
   deriving (Show)
 
+
 instance Eq Value where
   (Variable s1) == (Variable s2) = s1 == s2
   (Application f1 a1) == (Application f2 a2) = f1 == f2 && a1 == a2
   (Lambda p1 b1) == (Lambda p2 b2) = p1 == p2 && b1 == b2
   _ == _ = False
+
 
 toCode :: Value -> String
 toCode (Variable s) = s
@@ -25,16 +39,12 @@ toCode (Application f a) =
   in fCode ++ " " ++ aCode
 toCode (Lambda p b) = "\\" ++ p ++ ". " ++ toCode b
 
+
 clone :: Value -> Value
 clone (Variable s) = Variable s
 clone (Application f a) = Application (clone f) (clone a)
 clone (Lambda p b) = Lambda p (clone b)
 
-church :: Int -> Value
-church n =
-  let body 0 = Variable "x"
-      body m = Application (Variable "f") (body (m - 1))
-  in Lambda "f" (Lambda "x" (body n))
 
 betaEquiv :: Value -> Value -> Bool
 betaEquiv v1 v2 =
@@ -62,6 +72,14 @@ betaEquiv v1 v2 =
 
   in betaEquivWith v1 v2 [] []
 
+
+churchNum :: Int -> Value
+churchNum n =
+  let body 0 = Variable "x"
+      body m = Application (Variable "f") (body (m - 1))
+  in Lambda "f" (Lambda "x" (body n))
+
+
 unboundVars :: Value -> [String]
 unboundVars v =
   let unboundVarsWith (Variable s) bound =
@@ -77,7 +95,9 @@ unboundVars v =
 
   in unboundVarsWith v []
 
+
 replace :: Value -> String -> Value -> Value
+
 replace (Variable s) t v =
   if s == t
     then v
@@ -91,10 +111,14 @@ replace (Lambda p b) t v =
     then Lambda p b
     else if elem p (unboundVars v)
       then
-        let p' = p ++ "_"
+        let rename s = if elem s (unboundVars b) || elem s (unboundVars v)
+              then rename (s ++ "_")
+              else s
+            p' = rename p
             b' = replace b p (Variable p')
         in Lambda p' (replace b' t v)
       else Lambda p (replace b t v)
+
 
 reduceOne :: Value -> Maybe Value
 
@@ -112,16 +136,15 @@ reduceOne (Lambda p b) = case reduceOne b of
   Just b' -> Just (Lambda p b')
   Nothing -> Nothing
 
+
 reduceN :: Int -> Value -> Value
 reduceN 0 v = v
 reduceN n v = case reduceOne v of
   Just v' -> reduceN (n - 1) v'
   Nothing -> v
 
+
 reduceToNormal :: Value -> Value
 reduceToNormal v = case reduceOne v of
   Just v' -> reduceToNormal v'
   Nothing -> v
-
-main :: IO ()
-main = print (reduceToNormal (Application (church 3) (church 2)))

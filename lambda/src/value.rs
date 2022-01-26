@@ -91,10 +91,11 @@ impl Value {
 
     /// Retorna a codificação de church do dado número natural.
     ///
-    /// # Versão Recursiva
+    /// # Algoritmo Recursivo
+    ///
     /// ```haskell
-    /// church :: Int -> Value
-    /// church n =
+    /// churchNum :: Int -> Value
+    /// churchNum n =
     ///   let body 0 = Variable "x"
     ///       body m = Application (Variable "f") (body (m - 1))
     ///   in Lambda "f" (Lambda "x" (body n))
@@ -120,7 +121,8 @@ impl Value {
 
     /// Testa se dois termos são beta-equivalentes.
     ///
-    /// # Versão Recursiva
+    /// # Algoritmo Recursivo
+    ///
     /// ```haskell
     /// betaEquiv :: Value -> Value -> Bool
     /// betaEquiv v1 v2 =
@@ -258,10 +260,11 @@ impl Value {
     /// \a. (f y) (f y) (\x. a)
     /// ```
     ///
-    /// # Versão Recursiva
+    /// # Algoritmo Recursivo
     ///
     /// ```haskell
     /// replace :: Value -> String -> Value -> Value
+    ///
     /// replace (Variable s) t v =
     ///   if s == t
     ///     then v
@@ -275,7 +278,10 @@ impl Value {
     ///     then Lambda p b
     ///     else if elem p (unboundVars v)
     ///       then
-    ///         let p' = p ++ "_"
+    ///         let rename s = if elem s (unboundVars b) || elem s (unboundVars v)
+    ///               then rename (s ++ "_")
+    ///               else s
+    ///             p' = rename p
     ///             b' = replace b p (Variable p')
     ///         in Lambda p' (replace b' t v)
     ///       else Lambda p (replace b t v)
@@ -456,7 +462,8 @@ impl Value {
 
     /// Faz a redução de um único redex, mais externo, mais à esquerda. Retorna se tal redex foi encontrado.
     ///
-    /// # Versão Recursiva
+    /// # Algoritmo Recursivo
+    ///
     /// ```haskell
     /// reduceOne :: Value -> Maybe Value
     ///
@@ -524,7 +531,8 @@ impl Value {
 
     /// Cria um iterador sobre as variáveis não-ligadas neste termo. Variáveis podem aparecer mais de uma vez.
     ///
-    /// # Versão Recursiva
+    /// # Algoritmo Recursivo
+    ///
     /// ```haskell
     /// unboundVars :: Value -> [String]
     /// unboundVars v =
