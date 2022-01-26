@@ -1,7 +1,7 @@
 module Lambda
   ( Value(..)
   , toCode
-  , clone
+  , cloneValue
   , betaEquiv
   , churchNum
   , unboundVars
@@ -42,10 +42,10 @@ toCode (Lambda p b) = "\\" ++ p ++ ". " ++ toCode b
 
 -- Note that this useless in Haskell, it is only for mimicking the equivalent
 -- Rust cloning algorithm.
-clone :: Value -> Value
-clone (Variable s) = Variable s
-clone (Application f a) = Application (clone f) (clone a)
-clone (Lambda p b) = Lambda p (clone b)
+cloneValue :: Value -> Value
+cloneValue (Variable s) = Variable s
+cloneValue (Application f a) = Application (cloneValue f) (cloneValue a)
+cloneValue (Lambda p b) = Lambda p (cloneValue b)
 
 
 betaEquiv :: Value -> Value -> Bool

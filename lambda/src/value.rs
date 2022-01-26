@@ -482,6 +482,14 @@ impl Value {
     ///   Just b' -> Just (Lambda p b')
     ///   Nothing -> Nothing
     ///
+    ///
+    /// reduceN :: Int -> Value -> Value
+    /// reduceN 0 v = v
+    /// reduceN n v = case reduceOne v of
+    ///   Just v' -> reduceN (n - 1) v'
+    ///   Nothing -> v
+    ///
+    ///
     /// reduceToNormal :: Value -> Value
     /// reduceToNormal v = case reduceOne v of
     ///   Just v' -> reduceToNormal v'
@@ -617,10 +625,12 @@ impl Clone for Value {
     /// # Algoritmo recursivo
     ///
     /// ```haskell
-    /// clone :: Value -> Value
-    /// clone (Variable s) = Variable s
-    /// clone (Application f a) = Application (clone f) (clone a)
-    /// clone (Lambda p b) = Lambda p (clone b)
+    /// -- Note that this useless in Haskell, it is only for mimicking the equivalent
+    /// -- Rust cloning algorithm.
+    /// cloneValue :: Value -> Value
+    /// cloneValue (Variable s) = Variable s
+    /// cloneValue (Application f a) = Application (cloneValue f) (cloneValue a)
+    /// cloneValue (Lambda p b) = Lambda p (cloneValue b)
     /// ```
     fn clone(&self) -> Self {
         /// Uma operação auxiliar de clonagem.
