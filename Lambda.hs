@@ -40,6 +40,8 @@ toCode (Application f a) =
 toCode (Lambda p b) = "\\" ++ p ++ ". " ++ toCode b
 
 
+-- Note that this useless in Haskell, it is only for mimicking the equivalent
+-- Rust cloning algorithm.
 clone :: Value -> Value
 clone (Variable s) = Variable s
 clone (Application f a) = Application (clone f) (clone a)
