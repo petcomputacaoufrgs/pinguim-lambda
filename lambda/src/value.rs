@@ -119,6 +119,38 @@ impl Value {
         }
     }
 
+    pub fn church_numeral_to_int(&self) -> Option<u32> {
+        let (param_f, param_x, mut body) = match self {
+            Value::Lambda { parameter: param_f, body } => match body.as_value()
+            {
+                Value::Lambda { parameter: param_x, body } => {
+                    Some((param_f, param_x, body.as_value()))
+                }
+                _ => None,
+            },
+            _ => None,
+        }?;
+
+        let mut converted_int = 0;
+        loop {
+            match body {
+                Value::Variable(variable) if variable == param_x => break,
+                Value::Application { function, argument } => {
+                    match function.as_value() {
+                        Value::Variable(variable) if variable == param_f => {
+                            converted_int += 1;
+                            body = argument;
+                        }
+                        _ => None?,
+                    }
+                }
+                _ => None?,
+            }
+        }
+
+        Some(converted_int)
+    }
+
     /// Testa se dois termos são beta-equivalentes.
     ///
     /// # Algoritmo Recursivo
