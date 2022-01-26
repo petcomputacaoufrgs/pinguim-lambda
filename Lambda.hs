@@ -12,6 +12,19 @@ instance Eq Value where
   (Lambda p1 b1) == (Lambda p2 b2) = p1 == p2 && b1 == b2
   _ == _ = False
 
+toCode :: Value -> String
+toCode (Variable s) = s
+toCode (Application f a) =
+  let fCode = case f of
+        Lambda _ _ -> "(" ++ toCode f ++ ")"
+        _ -> toCode f
+      aCode = case a of
+        Application _ _ -> "(" ++ toCode a ++ ")"
+        Lambda _ _ -> "(" ++ toCode a ++ ")"
+        _ -> toCode a
+  in fCode ++ " " ++ aCode
+toCode (Lambda p b) = "\\" ++ p ++ ". " ++ toCode b
+
 clone :: Value -> Value
 clone (Variable s) = Variable s
 clone (Application f a) = Application (clone f) (clone a)
@@ -109,3 +122,6 @@ reduceToNormal :: Value -> Value
 reduceToNormal v = case reduceOne v of
   Just v' -> reduceToNormal v'
   Nothing -> v
+
+main :: IO ()
+main = print (reduceToNormal (Application (church 3) (church 2)))
