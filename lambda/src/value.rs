@@ -253,6 +253,7 @@ impl Value {
                                 argument: other_arg,
                             },
                         ) => {
+                            // .pop() retorna elementos na ordem inversa do .push()
                             operation_stack
                                 .push(Operation::Compare(self_arg, other_arg));
                             operation_stack.push(Operation::Compare(
@@ -311,9 +312,9 @@ impl Value {
     /// # Exemplo
     ///
     /// ```text
-    /// substituir (x) por (f y) em (\a. x x (\x. a))
+    /// substituir (x) por (f y) em (x (\h. h x) (\x. x z))
     /// =>
-    /// \a. (f y) (f y) (\x. a)
+    /// (f y (\h. h (f y)) (\x. x z))
     /// ```
     ///
     /// # Algoritmo Recursivo
@@ -347,11 +348,11 @@ impl Value {
     /// # Captura de variáveis
     ///
     /// ```text
-    /// λa. (λx. λa. x a) a
+    /// λa. (λx. λa. x a) (λz. a)
     /// ```
-    /// <=> substituir `x` por `a`
+    /// <=> substituir `x` por `(λz. a)`
     /// ```text
-    /// λa. (λa. a a)
+    /// λa. (λa. (λz. a) a)
     /// ```
     ///
     /// Aqui ocorreu uma captura de variáveis, um erro, pois os dois `a` se
@@ -361,21 +362,21 @@ impl Value {
     ///
     /// Solução mais básica? Trocar nome do parâmetro.
     /// ```text
-    /// λa. (λa_. a a_)
+    /// λa. (λa_. (λz. a) a_)
     /// ```
     ///
     /// No entanto, é preciso cuidar o seguinte:
     /// ```text
-    /// λa_. λa. (λx. λa. x a a_) a
+    /// λa_. λa. (λx. λa. x a a_) (λz. a) k
     /// ```
-    /// <=> substituir `x` por `a`
+    /// <=> substituir `x` por `(λz. a)`
     /// ```text
-    /// λa_. λa. (λa_. a a_ a_) a
+    /// λa_. λa. (λa_. (λz. a) a_ a_) k
     /// ```
     ///
     /// Mas a resposta correta deve ser:
     /// ```text
-    /// λa_. λa. (λa__. a a__ a_) a
+    /// λa_. λa. (λa__. (λz. a) a__ a_) k
     /// ```
     ///
     /// Solução mais básica? Aumentar o nome da variável com `_` até não haver
@@ -384,18 +385,30 @@ impl Value {
         /// Argumentos de uma substituição com variável a ser substituída e novo valor.
         enum Replacement<'this, 'var, 'new_value> {
             /// Substituição principal requisitada ao chamar o método [`Value::replace`].
-            /// O conjunto presente é o conjunto de variáveis não-ligadas no novo valor.
-            Main(&'var str, &'new_value Value, HashSet<&'new_value str>),
+            Main {
+                /// Variável alvo da substituição (e.g. a ser substituída).
+                target_var: &'var str,
+                /// Novo valor substituindo a variável alvo.
+                new_value: &'new_value Value,
+                /// O conjunto de variáveis não-ligadas no novo valor.
+                new_val_unbound_vars: HashSet<&'new_value str>,
+            },
             /// Substituição intermediária para renomear o parâmetro de um lambda.
-            Rename { old_parameter: String, new_parameter: &'this str },
+            Rename {
+                /// Nome antigo do parâmetro.
+                old_parameter: String,
+                /// Novo nome do parâmetro.
+                new_parameter: &'this str,
+            },
         }
 
         impl<'this, 'var, 'new_value> Replacement<'this, 'var, 'new_value> {
-            /// Testa se a dada variável é não-ligada dentro do novo valor desta substituição.
+            /// Testa se a dada variável é não-ligada dentro do "novo valor" desta substituição
+            /// (i.e. o valor que vai substituir a variável alvo).
             fn is_unbound_var(&self, var_name: &str) -> bool {
                 match self {
-                    Replacement::Main(_, _, unbound_set) => {
-                        unbound_set.contains(var_name)
+                    Replacement::Main { new_val_unbound_vars, .. } => {
+                        new_val_unbound_vars.contains(var_name)
                     }
                     Replacement::Rename { new_parameter, .. } => {
                         *new_parameter == var_name
@@ -406,7 +419,7 @@ impl Value {
             /// Retorna o nome da variável alvo da substituição, isto é, a variável a ser substituída.
             fn target_var(&self) -> &str {
                 match self {
-                    Replacement::Main(target_var, _, _) => target_var,
+                    Replacement::Main { target_var, .. } => target_var,
                     Replacement::Rename { old_parameter, .. } => old_parameter,
                 }
             }
@@ -414,7 +427,7 @@ impl Value {
             /// Clona recursos e retorna o novo termo a ser usado na substituição.
             fn clone_new_value(&self) -> Value {
                 match self {
-                    Replacement::Main(_, new_value, _) => (*new_value).clone(),
+                    Replacement::Main { new_value, .. } => (*new_value).clone(),
                     Replacement::Rename { new_parameter, .. } => {
                         Value::Variable((*new_parameter).to_owned())
                     }
@@ -430,11 +443,14 @@ impl Value {
             DropReplacement(usize),
         }
 
-        let mut replacements = vec![Replacement::Main(
+        // Argumentos de todas as substituições usadas pelas operações.
+        let mut replacements = vec![Replacement::Main {
             target_var,
             new_value,
-            new_value.unbound_vars().collect(),
-        )];
+            new_val_unbound_vars: new_value.unbound_vars().collect(),
+        }];
+        // Operações: responsáveis por orquestrarem os passos a partir da
+        // operação inicial, usando as substituições.
         let mut operation_stack = vec![Operation::Replace(self, 1)];
 
         while let Some(operation) = operation_stack.pop() {
@@ -443,11 +459,16 @@ impl Value {
                     Value::Variable(variable) => {
                         if let Some(position) = replacements[..soft_size]
                             .iter()
+                            // Último replacement que satisfaz a nossa condição.
                             .rposition(|replacement| {
                                 variable == replacement.target_var()
                             })
                         {
+                            // Troca o conteúdo de value.
                             *value = replacements[position].clone_new_value();
+                            // Adiciona operação para tentar substituições que
+                            // vierem antes dessa, usando como alvo o mesmo
+                            // value.
                             operation_stack
                                 .push(Operation::Replace(value, position));
                         }
@@ -461,13 +482,38 @@ impl Value {
                     }
 
                     Value::Lambda { parameter, body } => {
+                        // Vetor de substituições =
+                        //  [
+                        //      substituir x por (f a),
+                        //      substituir y por (g (g b)),
+                        //      substituir z por (c (h c)),
+                        //      substituir w por (λf. f f),
+                        //      substituir v por (e),
+                        //  ]
+                        //
+                        // Expressão atual = λz. (x y z w v)
+                        //
+                        // Note que a substituição de z (índice 2) entra em
+                        // conflito com o parâmetro λz, então a partir de z
+                        // todas substituições devem ser bloqueadas, porque a
+                        // substituição posterior é consequência da atual
+                        // (delimitadas por "soft size").
+                        //
+                        // Portanto, somente as substituições x e y podem ser
+                        // feitas (índices 0 e 1), e 2 é o novo "soft size".
                         let mut new_soft_size = replacements[..soft_size]
                             .iter()
+                            // Posição do primeiro replacement que satisfizer a
+                            // nossa condição.
                             .position(|replacement| {
                                 parameter == replacement.target_var()
                             })
+                            // Se não houver tal replacement, simplesmente use o
+                            // "soft size" de antes.
                             .unwrap_or(soft_size);
 
+                        // Função (closure) para testar se uma variável é livre
+                        // em algum replacement válido aqui dentro.
                         let is_unbound_var = |variable: &str| {
                             replacements[..new_soft_size].iter().any(
                                 |replacement| {
@@ -481,6 +527,9 @@ impl Value {
                             let body_unbound: HashSet<_> =
                                 body.unbound_vars().collect();
                             let mut renamed_var = format!("{}_", parameter);
+
+                            // Enquanto a nova variável for livre no corpo
+                            // do lambda ou em algum replacement:
                             while param_unbound {
                                 param_unbound = is_unbound_var(&renamed_var)
                                     || body_unbound
@@ -490,8 +539,15 @@ impl Value {
                                 }
                             }
 
+                            // Substituí somente o atributo "parameter" de Value::Lambda
                             let old_parameter =
-                                mem::replace(parameter, renamed_var.clone());
+                                mem::replace(parameter, renamed_var);
+
+                            // Adiciona um renomeamento de variáveis para o
+                            // corpo do lambda.
+                            //
+                            // .insert() automaticamente abre espaço para
+                            // inserir no índice desejado.
                             replacements.insert(
                                 new_soft_size,
                                 Replacement::Rename {
@@ -499,9 +555,14 @@ impl Value {
                                     new_parameter: parameter.as_str(),
                                 },
                             );
+
+                            // Destruirá o renomeamento logo após passar pelo
+                            // corpo do lambda.
                             operation_stack.push(Operation::DropReplacement(
                                 new_soft_size,
                             ));
+
+                            // Conta a nova substituição (o renomeamento).
                             new_soft_size += 1;
                         }
 
@@ -511,6 +572,8 @@ impl Value {
                 },
 
                 Operation::DropReplacement(index) => {
+                    // .remove() automaticamente shifta elementos após o
+                    // elemento
                     replacements.remove(index);
                 }
             }
@@ -713,11 +776,13 @@ impl Clone for Value {
                     }
 
                     Value::Application { function, argument } => {
+                        // .pop() retorna elementos na ordem inversa do .push()
                         operation_stack.push(Operation::MakeApplication);
                         operation_stack.push(Operation::Clone(argument));
                         operation_stack.push(Operation::Clone(function));
                     }
                     Value::Lambda { parameter, body } => {
+                        // .pop() retorna elementos na ordem inversa do .push()
                         operation_stack
                             .push(Operation::MakeLambda(parameter.clone()));
                         operation_stack.push(Operation::Clone(body));
@@ -786,6 +851,7 @@ impl<'value> Iterator for UnboundVars<'value> {
                         // remover o parâmetro.
                         let is_new_element = self.bound_set.insert(parameter);
                         if is_new_element {
+                            // .pop() retorna elementos na ordem inversa do .push()
                             self.operation_stack
                                 .push(UnboundVarsOper::RemoveBound(parameter));
                         }
