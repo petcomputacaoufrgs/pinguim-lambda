@@ -278,9 +278,10 @@ impl Value {
     ///     then Lambda p b
     ///     else if elem p (unboundVars v)
     ///       then
-    ///         let rename s = if elem s (unboundVars b) || elem s (unboundVars v)
-    ///               then rename (s ++ "_")
-    ///               else s
+    ///         let rename s =
+    ///               if elem s (unboundVars b) || elem s (unboundVars v)
+    ///                 then rename (s ++ "_")
+    ///                 else s
     ///             p' = rename p
     ///             b' = replace b p (Variable p')
     ///         in Lambda p' (replace b' t v)
