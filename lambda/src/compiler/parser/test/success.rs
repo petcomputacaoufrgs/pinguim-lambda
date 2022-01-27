@@ -1279,7 +1279,6 @@ fn parse_with_many_bindings() {
                             },
                         },
                     },
-                    // "let\nsucc = \\n. \\f x. n f (f x);\nadd = \\m n. m succ n;\nmul = \\m n. m (add n) 0;\nin\nmul 3 5"
                     body: Box::new(ast::Expr::Lambda {
                         parameter: ast::Symbol {
                             content: String::from("n"),
