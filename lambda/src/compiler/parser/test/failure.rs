@@ -965,7 +965,7 @@ fn missing_let_keyword_at_the_beginning() {
         errors, 
         &[
             "Token inesperado encontrado, esperava-se um \"<número>\", \"<identificador>\", \"\\\" ou \"(\", na linha 1 e coluna 8",
-            "Token inesperado encontrado, esperava-se um \"<número>\", \"<identificador>\", \"\\\" ou \"(\", de linha 2 e coluna 1, até coluna 2"
+            "Token inesperado encontrado, esperava-se um \"<número>\", \"<identificador>\", \"\\\" ou \"(\", da linha 2 e coluna 1, até a coluna 2"
         ]
     );
 

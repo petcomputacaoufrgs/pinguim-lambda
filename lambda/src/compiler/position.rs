@@ -36,7 +36,7 @@ impl Position {
     }
 
     /// Atualiza índices conforme caractere
-    /// 
+    ///
     /// - `character`: novo caractere lido
     fn update_indices(&mut self, character: char) {
         self.utf8_index += character.len_utf8();
@@ -44,14 +44,14 @@ impl Position {
     }
 
     /// Atualiza nova linha e nova coluna de acordo com o caractere lido
-    /// 
+    ///
     /// - `character`: novo caractere lido
     pub fn update(&mut self, character: char) {
         self.update_indices(character);
         if character == '\n' {
             self.update_newline();
         } else {
-            self.update_column();   // SE QUEBRAR TIRA ; 
+            self.update_column(); // SE QUEBRAR TIRA ;
         }
     }
 }
@@ -68,7 +68,7 @@ pub struct Span {
     ///
     /// - `start`: posição inicial do span (inclusivo)
     pub start: Position,
-    /// 
+    ///
     /// - `end`: posição final do span (exclusivo)
     pub end: Position,
 }
@@ -82,14 +82,14 @@ impl Default for Span {
 
 impl Span {
     /// Cria uma estrutura Span com começo e fim no mesmo lugar
-    /// 
+    ///
     /// - `start`: posição inicial do caractere
     pub fn from_start(start: Position) -> Self {
         Self { start, end: start }
     }
 
     /// Atualiza posição final do símbolo
-    /// 
+    ///
     /// - `character`:  novo caractere lido
     pub fn update(&mut self, character: char) {
         self.end.update(character);
@@ -106,11 +106,11 @@ impl fmt::Display for Span {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         let end = Position { column: self.end.column - 1, ..self.end };
         if self.start.line != self.end.line {
-            write!(formatter, "de {}, até {}", self.start, end)
+            write!(formatter, "da {}, até a {}", self.start, end)
         } else if self.start.column + 1 == self.end.column {
             write!(formatter, "na {}", self.start)
         } else {
-            write!(formatter, "de {}, até coluna {}", self.start, end.column)
+            write!(formatter, "da {}, até a coluna {}", self.start, end.column)
         }
     }
 }
