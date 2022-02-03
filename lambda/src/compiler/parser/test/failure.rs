@@ -5,20 +5,26 @@ use crate::compiler::{
     position::{Position, Span},
 };
 
+use std::fs::File;
+use std::io::Write;
+
 /*
     - erro de código vazio OK!
     - erro de lambda sem parametro OK!
     - erro de lambda sem corpo OK!
         - até EOF OK!
-        - até Semicolon  OK!
+        - até Semicolon OK!
         - até In OK!
     - erro de faltando token equal no binding OK!
-    - erro de parenteses aberto que não foi fechado
-        - numa expressão delimitada por ";" ou "in"
-        - numa expressão no final do código
-    - erro de parenteses fechando sem parenteses aberto associado
-    - erro de faltando "in" no código
-    - erro de faltando "let" no início do código
+    - erro de parenteses aberto que não foi fechado OK!
+        - numa expressão delimitada por ";" OK!
+        - numa expressão delimitada por "in" OK!
+        - numa expressão no final do código OK!
+    - erro de parenteses fechando sem parenteses aberto associado OK!
+    - erro de faltando "in" no código sem ponto e vírgula OK!
+    - erro de faltando "in" no código com ponto e vírgula OK!
+    - erro de faltando "let" no início do código OK!
+    
     - erro de parênteses nos parâmetros do lambda
     - erro de lambda sem ponto
         - só vai parar no final do arquivo! (melhorar isso - talvez usar o ExprEnd)
@@ -324,4 +330,767 @@ fn binding_missing_equal_symbol() {
             }]
         })
     );
+}
+
+#[test]
+fn not_closed_open_paren_until_eof() {
+    let source_code = "\\f.\\x.f (f (f x)";
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(source_code, &mut diagnostics);
+    let ast = parse(tokens, &mut diagnostics);
+
+    assert!(diagnostics.is_err());
+
+    let errors =
+        diagnostics.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+    assert_eq!(
+        errors,
+        &["Parentesis aberto mas não fechado, na linha 1 e coluna 9"]
+    );
+
+    assert_eq!(
+        ast,
+        Some(ast::Program {
+            main_expression: ast::Expr::Lambda {
+                parameter: ast::Symbol {
+                    content: String::from("f"),
+                    span: Span {
+                        start: Position {
+                            line: 1,
+                            column: 2,
+                            utf8_index: 1,
+                            utf16_index: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 3,
+                            utf8_index: 2,
+                            utf16_index: 2,
+                        }
+                    }
+                },
+                body: Box::new(ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("x"),
+                        span: Span {
+                            start: Position {
+                                line: 1,
+                                column: 5,
+                                utf8_index: 4,
+                                utf16_index: 4,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 6,
+                                utf8_index: 5,
+                                utf16_index: 5,
+                            }
+                        }
+                    },
+                    body: Box::new(ast::Expr::Application {
+                        function: Box::new(ast::Expr::Variable(ast::Symbol {
+                            content: String::from("f"),
+                            span: Span {
+                                start: Position {
+                                    line: 1,
+                                    column: 7,
+                                    utf8_index: 6,
+                                    utf16_index: 6,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 8,
+                                    utf8_index: 7,
+                                    utf16_index: 7,
+                                }
+                            }
+                        })),
+                        argument: Box::new(ast::Expr::Application {
+                            function: Box::new(ast::Expr::Variable(
+                                ast::Symbol {
+                                    content: String::from("f"),
+                                    span: Span {
+                                        start: Position {
+                                            line: 1,
+                                            column: 10,
+                                            utf8_index: 9,
+                                            utf16_index: 9,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 11,
+                                            utf8_index: 10,
+                                            utf16_index: 10,
+                                        }
+                                    }
+                                }
+                            )),
+                            argument: Box::new(ast::Expr::Application {
+                                function: Box::new(ast::Expr::Variable(
+                                    ast::Symbol {
+                                        content: String::from("f"),
+                                        span: Span {
+                                            start: Position {
+                                                line: 1,
+                                                column: 13,
+                                                utf8_index: 12,
+                                                utf16_index: 12,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 14,
+                                                utf8_index: 13,
+                                                utf16_index: 13,
+                                            }
+                                        }
+                                    }
+                                )),
+                                argument: Box::new(ast::Expr::Variable(
+                                    ast::Symbol {
+                                        content: String::from("x"),
+                                        span: Span {
+                                            start: Position {
+                                                line: 1,
+                                                column: 15,
+                                                utf8_index: 14,
+                                                utf16_index: 14,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 16,
+                                                utf8_index: 15,
+                                                utf16_index: 15,
+                                            }
+                                        }
+                                    }
+                                ))
+                            })
+                        })
+                    })
+                })
+            },
+            bindings: Vec::new()
+        })
+    )
+}
+
+#[test]
+fn not_closed_open_paren_until_semicolon() {
+    let source_code = "let\n    three = \\f.\\x.f (f (f x);\nin\n   three";
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(source_code, &mut diagnostics);
+    let ast = parse(tokens, &mut diagnostics);
+
+    assert!(diagnostics.is_err());
+
+    let errors =
+        diagnostics.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+    assert_eq!(
+        errors,
+        &["Parentesis aberto mas não fechado, na linha 2 e coluna 21"]
+    );
+
+    assert_eq!(
+        ast,
+        Some(ast::Program {
+            main_expression: ast::Expr::Variable(ast::Symbol {
+                content: String::from("three"),
+                span: Span {
+                    start: Position {
+                        line: 4,
+                        column: 4,
+                        utf8_index: 40,
+                        utf16_index: 40,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 9,
+                        utf8_index: 45,
+                        utf16_index: 45,
+                    },
+                },
+            }),
+            bindings: vec![ast::Binding {
+                name: ast::Symbol {
+                    content: String::from("three"),
+                    span: Span {
+                        start: Position {
+                            line: 2,
+                            column: 5,
+                            utf8_index: 8,
+                            utf16_index: 8,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 10,
+                            utf8_index: 13,
+                            utf16_index: 13,
+                        },
+                    },
+                },
+                expression: ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("f"),
+                        span: Span {
+                            start: Position {
+                                line: 2,
+                                column: 14,
+                                utf8_index: 17,
+                                utf16_index: 17,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 15,
+                                utf8_index: 18,
+                                utf16_index: 18,
+                            },
+                        },
+                    },
+                    body: Box::new(ast::Expr::Lambda {
+                        parameter: ast::Symbol {
+                            content: String::from("x"),
+                            span: Span {
+                                start: Position {
+                                    line: 2,
+                                    column: 17,
+                                    utf8_index: 20,
+                                    utf16_index: 20,
+                                },
+                                end: Position {
+                                    line: 2,
+                                    column: 18,
+                                    utf8_index: 21,
+                                    utf16_index: 21,
+                                },
+                            },
+                        },
+                        body: Box::new(ast::Expr::Application {
+                            function: Box::new(ast::Expr::Variable(
+                                ast::Symbol {
+                                    content: String::from("f"),
+                                    span: Span {
+                                        start: Position {
+                                            line: 2,
+                                            column: 19,
+                                            utf8_index: 22,
+                                            utf16_index: 22,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 20,
+                                            utf8_index: 23,
+                                            utf16_index: 23,
+                                        },
+                                    },
+                                }
+                            )),
+                            argument: Box::new(ast::Expr::Application {
+                                function: Box::new(ast::Expr::Variable(
+                                    ast::Symbol {
+                                        content: String::from("f"),
+                                        span: Span {
+                                            start: Position {
+                                                line: 2,
+                                                column: 22,
+                                                utf8_index: 25,
+                                                utf16_index: 25,
+                                            },
+                                            end: Position {
+                                                line: 2,
+                                                column: 23,
+                                                utf8_index: 26,
+                                                utf16_index: 26,
+                                            },
+                                        },
+                                    },
+                                )),
+                                argument: Box::new(ast::Expr::Application {
+                                    function: Box::new(ast::Expr::Variable(
+                                        ast::Symbol {
+                                            content: String::from("f"),
+                                            span: Span {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 25,
+                                                    utf8_index: 28,
+                                                    utf16_index: 28,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 26,
+                                                    utf8_index: 29,
+                                                    utf16_index: 29,
+                                                },
+                                            },
+                                        },
+                                    )),
+                                    argument: Box::new(ast::Expr::Variable(
+                                        ast::Symbol {
+                                            content: String::from("x"),
+                                            span: Span {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 27,
+                                                    utf8_index: 30,
+                                                    utf16_index: 30,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 28,
+                                                    utf8_index: 31,
+                                                    utf16_index: 31,
+                                                },
+                                            },
+                                        },
+                                    )),
+                                }),
+                            }),
+                        }),
+                    }),
+                },
+            }],
+        })
+    )
+}
+
+#[test]
+fn not_closed_open_paren_until_in_keyword() {
+    let source_code = "let\n    three = \\f.\\x.f (f (f x)\nin\n   three";
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(source_code, &mut diagnostics);
+    let ast = parse(tokens, &mut diagnostics);
+
+    assert!(diagnostics.is_err());
+
+    let errors =
+        diagnostics.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+    assert_eq!(
+        errors,
+        &["Parentesis aberto mas não fechado, na linha 2 e coluna 21"]
+    );
+
+    assert_eq!(
+        ast,
+        Some(ast::Program {
+            main_expression: ast::Expr::Variable(ast::Symbol {
+                content: String::from("three"),
+                span: Span {
+                    start: Position {
+                        line: 4,
+                        column: 4,
+                        utf8_index: 39,
+                        utf16_index: 39,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 9,
+                        utf8_index: 44,
+                        utf16_index: 44,
+                    },
+                },
+            }),
+            bindings: vec![ast::Binding {
+                name: ast::Symbol {
+                    content: String::from("three"),
+                    span: Span {
+                        start: Position {
+                            line: 2,
+                            column: 5,
+                            utf8_index: 8,
+                            utf16_index: 8,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 10,
+                            utf8_index: 13,
+                            utf16_index: 13,
+                        },
+                    },
+                },
+                expression: ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("f"),
+                        span: Span {
+                            start: Position {
+                                line: 2,
+                                column: 14,
+                                utf8_index: 17,
+                                utf16_index: 17,
+                            },
+                            end: Position {
+                                line: 2,
+                                column: 15,
+                                utf8_index: 18,
+                                utf16_index: 18,
+                            },
+                        },
+                    },
+                    body: Box::new(ast::Expr::Lambda {
+                        parameter: ast::Symbol {
+                            content: String::from("x"),
+                            span: Span {
+                                start: Position {
+                                    line: 2,
+                                    column: 17,
+                                    utf8_index: 20,
+                                    utf16_index: 20,
+                                },
+                                end: Position {
+                                    line: 2,
+                                    column: 18,
+                                    utf8_index: 21,
+                                    utf16_index: 21,
+                                },
+                            },
+                        },
+                        body: Box::new(ast::Expr::Application {
+                            function: Box::new(ast::Expr::Variable(
+                                ast::Symbol {
+                                    content: String::from("f"),
+                                    span: Span {
+                                        start: Position {
+                                            line: 2,
+                                            column: 19,
+                                            utf8_index: 22,
+                                            utf16_index: 22,
+                                        },
+                                        end: Position {
+                                            line: 2,
+                                            column: 20,
+                                            utf8_index: 23,
+                                            utf16_index: 23,
+                                        },
+                                    },
+                                }
+                            )),
+                            argument: Box::new(ast::Expr::Application {
+                                function: Box::new(ast::Expr::Variable(
+                                    ast::Symbol {
+                                        content: String::from("f"),
+                                        span: Span {
+                                            start: Position {
+                                                line: 2,
+                                                column: 22,
+                                                utf8_index: 25,
+                                                utf16_index: 25,
+                                            },
+                                            end: Position {
+                                                line: 2,
+                                                column: 23,
+                                                utf8_index: 26,
+                                                utf16_index: 26,
+                                            },
+                                        },
+                                    },
+                                )),
+                                argument: Box::new(ast::Expr::Application {
+                                    function: Box::new(ast::Expr::Variable(
+                                        ast::Symbol {
+                                            content: String::from("f"),
+                                            span: Span {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 25,
+                                                    utf8_index: 28,
+                                                    utf16_index: 28,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 26,
+                                                    utf8_index: 29,
+                                                    utf16_index: 29,
+                                                },
+                                            },
+                                        },
+                                    )),
+                                    argument: Box::new(ast::Expr::Variable(
+                                        ast::Symbol {
+                                            content: String::from("x"),
+                                            span: Span {
+                                                start: Position {
+                                                    line: 2,
+                                                    column: 27,
+                                                    utf8_index: 30,
+                                                    utf16_index: 30,
+                                                },
+                                                end: Position {
+                                                    line: 2,
+                                                    column: 28,
+                                                    utf8_index: 31,
+                                                    utf16_index: 31,
+                                                },
+                                            },
+                                        },
+                                    )),
+                                }),
+                            }),
+                        }),
+                    }),
+                },
+            }],
+        })
+    );
+}
+
+#[test]
+fn not_opened_close_paren() {
+    let source_code = "(\\x. x) (\\x. x))";
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(source_code, &mut diagnostics);
+    let ast = parse(tokens, &mut diagnostics);
+
+    assert!(diagnostics.is_err());
+
+    let errors =
+        diagnostics.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+    assert_eq!(
+        errors,
+        &["Parentesis fechado sobrando, na linha 1 e coluna 16"]
+    );
+
+    assert_eq!(
+        ast,
+        Some(ast::Program {
+            main_expression: ast::Expr::Application {
+                function: Box::new(ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("x"),
+                        span: Span {
+                            start: Position {
+                                line: 1,
+                                column: 3,
+                                utf8_index: 2,
+                                utf16_index: 2,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 4,
+                                utf8_index: 3,
+                                utf16_index: 3,
+                            }
+                        }
+                    },
+                    body: Box::new(ast::Expr::Variable(ast::Symbol {
+                        content: String::from("x"),
+                        span: Span {
+                            start: Position {
+                                line: 1,
+                                column: 6,
+                                utf8_index: 5,
+                                utf16_index: 5,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 7,
+                                utf8_index: 6,
+                                utf16_index: 6,
+                            }
+                        }
+                    }))
+                }),
+                argument: Box::new(ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("x"),
+                        span: Span {
+                            start: Position {
+                                line: 1,
+                                column: 11,
+                                utf8_index: 10,
+                                utf16_index: 10,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 12,
+                                utf8_index: 11,
+                                utf16_index: 11,
+                            }
+                        }
+                    },
+                    body: Box::new(ast::Expr::Variable(ast::Symbol {
+                        content: String::from("x"),
+                        span: Span {
+                            start: Position {
+                                line: 1,
+                                column: 14,
+                                utf8_index: 13,
+                                utf16_index: 13,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 15,
+                                utf8_index: 14,
+                                utf16_index: 14,
+                            }
+                        }
+                    }))
+                })
+            },
+            bindings: Vec::new()
+        })
+    )
+}
+
+#[test]
+fn missing_in_keyword() {
+    let source_code = "let\n    id = \\x. x\n   i i";
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(source_code, &mut diagnostics);
+    let ast = parse(tokens, &mut diagnostics);
+
+    assert!(diagnostics.is_err());
+
+    let errors =
+        diagnostics.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+    assert_eq!(errors, &["Fim inesperado do código"]);
+
+    assert_eq!(ast, None)
+}
+
+#[test]
+fn missing_in_keyword_with_semicolon() {
+    let source_code = "let\n    id = \\x. x;\n   i i";
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(source_code, &mut diagnostics);
+    let ast = parse(tokens, &mut diagnostics);
+
+    assert!(diagnostics.is_err());
+
+    let errors =
+        diagnostics.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+    assert_eq!(
+        errors, 
+        &[
+            "Token inesperado encontrado, esperava-se um \"=\", na linha 3 e coluna 6", 
+            "Fim inesperado do código"
+        ]
+    );
+
+    assert_eq!(ast, None)
+}
+
+#[test]
+fn missing_let_keyword_at_the_beginning() {
+    let source_code = "    id = \\x. x\nin\n   id id";
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(source_code, &mut diagnostics);
+    let ast = parse(tokens, &mut diagnostics);
+
+    assert!(diagnostics.is_err());
+
+    let errors =
+        diagnostics.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+    assert_eq!(
+        errors, 
+        &[
+            "Token inesperado encontrado, esperava-se um \"<número>\", \"<identificador>\", \"\\\" ou \"(\", na linha 1 e coluna 8",
+            "Token inesperado encontrado, esperava-se um \"<número>\", \"<identificador>\", \"\\\" ou \"(\", de linha 2 e coluna 1, até coluna 2"
+        ]
+    );
+
+    assert_eq!(
+        ast,
+        Some(ast::Program {
+            main_expression: ast::Expr::Application {
+                function: Box::new(ast::Expr::Variable(ast::Symbol {
+                    content: String::from("id"),
+                    span: Span {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                            utf8_index: 4,
+                            utf16_index: 4,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 7,
+                            utf8_index: 6,
+                            utf16_index: 6,
+                        }
+                    }
+                })),
+                argument: Box::new(ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("x"),
+                        span: Span {
+                            start: Position {
+                                line: 1,
+                                column: 11,
+                                utf8_index: 10,
+                                utf16_index: 10,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 12,
+                                utf8_index: 11,
+                                utf16_index: 11,
+                            }
+                        }
+                    },
+                    body: Box::new(ast::Expr::Application {
+                        function: Box::new(ast::Expr::Application {
+                            function: Box::new(ast::Expr::Variable(ast::Symbol {
+                                content: String::from("x"),
+                                span: Span {
+                                    start: Position {
+                                        line: 1,
+                                        column: 14,
+                                        utf8_index: 13,
+                                        utf16_index: 13,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 15,
+                                        utf8_index: 14,
+                                        utf16_index: 14,
+                                    }
+                                }
+                            })),
+                            argument: Box::new(ast::Expr::Variable(ast::Symbol {
+                                content: String::from("id"),
+                                span: Span {
+                                    start: Position {
+                                        line: 3,
+                                        column: 4,
+                                        utf8_index: 21,
+                                        utf16_index: 21,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 6,
+                                        utf8_index: 23,
+                                        utf16_index: 23,
+                                    }
+                                }
+                            }))
+                        }),
+                        argument: Box::new(ast::Expr::Variable(ast::Symbol {
+                            content: String::from("id"),
+                            span: Span {
+                                start: Position {
+                                    line: 3,
+                                    column: 7,
+                                    utf8_index: 24,
+                                    utf16_index: 24,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 9,
+                                    utf8_index: 26,
+                                    utf16_index: 26,
+                                }
+                            }
+                        }))
+                    })
+                }),
+            },
+            bindings: Vec::new()
+        })
+    )
 }
