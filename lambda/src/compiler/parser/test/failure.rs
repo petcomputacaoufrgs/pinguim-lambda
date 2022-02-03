@@ -5,31 +5,6 @@ use crate::compiler::{
     position::{Position, Span},
 };
 
-use std::fs::File;
-use std::io::Write;
-
-/*
-    - erro de código vazio OK!
-    - erro de lambda sem parametro OK!
-    - erro de lambda sem corpo OK!
-        - até EOF OK!
-        - até Semicolon OK!
-        - até In OK!
-    - erro de faltando token equal no binding OK!
-    - erro de parenteses aberto que não foi fechado OK!
-        - numa expressão delimitada por ";" OK!
-        - numa expressão delimitada por "in" OK!
-        - numa expressão no final do código OK!
-    - erro de parenteses fechando sem parenteses aberto associado OK!
-    - erro de faltando "in" no código sem ponto e vírgula OK!
-    - erro de faltando "in" no código com ponto e vírgula OK!
-    - erro de faltando "let" no início do código OK!
-    
-    - erro de parênteses nos parâmetros do lambda
-    - erro de lambda sem ponto
-        - só vai parar no final do arquivo! (melhorar isso - talvez usar o ExprEnd)
-*/
-
 #[test]
 fn empty_code() {
     let source_code = "";
@@ -1092,5 +1067,136 @@ fn missing_let_keyword_at_the_beginning() {
             },
             bindings: Vec::new()
         })
+    )
+}
+
+#[test]
+fn applying_application_to_lambda_params() {
+    let source_code = "\\x (y z). w";
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(source_code, &mut diagnostics);
+    let ast = parse(tokens, &mut diagnostics);
+
+    assert!(diagnostics.is_err());
+
+    let errors =
+        diagnostics.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+    assert_eq!(
+        errors, 
+        &[
+            "Token inesperado encontrado, esperava-se um \"<identificador>\", na linha 1 e coluna 4",
+            "Token inesperado encontrado, esperava-se um \"<identificador>\", na linha 1 e coluna 8"
+        ]
+    );
+
+    assert_eq!(
+        ast,
+        Some(ast::Program {
+            main_expression: ast::Expr::Lambda {
+                parameter: ast::Symbol {
+                    content: String::from("x"),
+                    span: Span {
+                        start: Position {
+                            line: 1,
+                            column: 2,
+                            utf8_index: 1,
+                            utf16_index: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 3,
+                            utf8_index: 2,
+                            utf16_index: 2,
+                        }
+                    }
+                },
+                body: Box::new(ast::Expr::Lambda {
+                    parameter: ast::Symbol {
+                        content: String::from("y"),
+                        span: Span {
+                            start: Position {
+                                line: 1,
+                                column: 5,
+                                utf8_index: 4,
+                                utf16_index: 4,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 6,
+                                utf8_index: 5,
+                                utf16_index: 5,
+                            }
+                        }
+                    },
+                    body: Box::new(ast::Expr::Lambda {
+                        parameter: ast::Symbol {
+                            content: String::from("z"),
+                            span: Span {
+                                start: Position {
+                                    line: 1,
+                                    column: 7,
+                                    utf8_index: 6,
+                                    utf16_index: 6,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 8,
+                                    utf8_index: 7,
+                                    utf16_index: 7,
+                                }
+                            }
+                        },
+                        body: Box::new(ast::Expr::Variable(ast::Symbol {
+                            content: String::from("w"),
+                            span: Span {
+                                start: Position {
+                                    line: 1,
+                                    column: 11,
+                                    utf8_index: 10,
+                                    utf16_index: 10,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 12,
+                                    utf8_index: 11,
+                                    utf16_index: 11,
+                                }
+                            }
+                        }))
+                    })
+                })
+            },
+            bindings: Vec::new()
+        })
+    )
+}
+
+#[test]
+fn lambda_params_without_dot_at_the_ending() {
+    let source_code = "\\x y z (w w) 3 5";
+    let mut diagnostics = Diagnostics::new();
+    let tokens = generate_tokens(source_code, &mut diagnostics);
+    let ast = parse(tokens, &mut diagnostics);
+
+    assert!(diagnostics.is_err());
+
+    let errors =
+        diagnostics.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+    assert_eq!(
+        errors, 
+        &[
+            "Token inesperado encontrado, esperava-se um \"<identificador>\", na linha 1 e coluna 8",
+            "Token inesperado encontrado, esperava-se um \"<identificador>\", na linha 1 e coluna 12",
+            "Token inesperado encontrado, esperava-se um \"<identificador>\", na linha 1 e coluna 14",
+            "Token inesperado encontrado, esperava-se um \"<identificador>\", na linha 1 e coluna 16",
+            "Fim inesperado do código"
+        ]
+    );
+
+    assert_eq!(
+        ast,
+        None
     )
 }
