@@ -6,8 +6,7 @@ import * as commonStyles from './common_styles.css';
 const supported = (() => {
     try {
         if (typeof WebAssembly === 'object'
-            && typeof WebAssembly.instantiate === 'function')
-        {
+            && typeof WebAssembly.instantiate === 'function') {
             const module = new WebAssembly.Module(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
             if (module instanceof WebAssembly.Module)
                 return new WebAssembly.Instance(module) instanceof WebAssembly.Instance;
@@ -30,7 +29,7 @@ function switchTheme(e) {
     else {
         document.documentElement.setAttribute('data-theme', 'light');
         toggleIcon.innerHTML = 'light_mode';
-    }    
+    }
 }
 toggleSwitch.addEventListener('change', switchTheme, false);
 
@@ -54,6 +53,10 @@ export const init = (() => {
         }
     }
 
+    window.addEventListener('load', () => {
+        callAllHandlers();
+    });
+
     window.addEventListener('DOMContentLoaded', () => {
         callAllHandlers();
     });
@@ -69,11 +72,23 @@ export const init = (() => {
 
 const storageKey = "pinguim.lambda.userCode";
 
+const storagePrefix = "pinguim.lambda";
+const storageCodeKey = storagePrefix + '.userCode';
+const storageCodeHistKey = storagePrefix + '.userCodeHistory';
+
 // Local Storage
-export const setStorage = (baseText) => {
-    localStorage.setItem(storageKey, baseText);
+export const saveCode = baseText => {
+    localStorage.setItem(storageCodeKey, baseText);
 };
 
-export const getStorage = () => {
-    return localStorage.getItem(storageKey);
+export const loadCode = () => {
+    return localStorage.getItem(storageCodeKey);
+};
+
+export const saveCodeHist = array => {
+    localStorage.setItem(storageCodeHistKey, JSON.stringify(array));
+};
+
+export const loadCodeHist = () => {
+    return JSON.parse(localStorage.getItem(storageCodeHistKey));
 };

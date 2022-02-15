@@ -17,7 +17,6 @@
     margin: 0 2vw;
 }
 
-
 /* ACTUAL LAMBDA TERM AREA */
 .actual-term {
     margin-top: 2.5rem;
@@ -45,6 +44,20 @@
 #tree-wrapper, #tree {
     width: 30vw;
     height: 100%;
+}
+
+.coding-input {
+    display: flex;
+}
+
+.line-column-area {
+    margin-left: 0.5vw;
+    margin-top: 1vh;
+    font-size: 1.06rem;
+}
+
+.line-column {
+    font-weight: bold;
 }
 
 /* ======> SETTINGS FOR CELLPHONES <====== */
@@ -113,8 +126,4 @@
 .code-textarea {
     margin: 0 0;
     background: transparent;
-}
-
-.coding-input {
-    display: flex;
 }

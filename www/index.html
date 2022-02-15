@@ -45,10 +45,14 @@
                     <!-- Original code -->
                     <div class="front">
                         <textarea id="userinput" class="code-textarea" spellcheck="false"></textarea>
+						<div class="line-column-area">
+							Linha: <span class="line-column" id="input-line"></span>,
+							Coluna: <span class="line-column" id="input-column"></span>
+						</div>
                     </div>
                     <!-- Highlighted code -->
                     <div class="behind">
-                        <pre id="codeediting" class="highlighting"><code id="codeholder" class="code-highlight"></code></pre>
+                        <pre id="codeediting" class="highlighting"></pre>
                     </div>
                 </div>
 				<div class="log-and-execution-area">
