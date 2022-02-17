@@ -7,13 +7,15 @@
     width: 30vw;
 }
 
+#tree {
+    background-color: var(--full-drawing-background);
+}
 
 /* CODING AREA */
 .coding-area {
     width: 60vw;
     margin: 0 2vw;
 }
-
 
 /* ACTUAL LAMBDA TERM AREA */
 .actual-term {
@@ -39,6 +41,24 @@
     margin: 0;
 }
 
+#tree-wrapper, #tree {
+    width: 30vw;
+    height: 100%;
+}
+
+.coding-input {
+    display: flex;
+}
+
+.line-column-area {
+    margin-left: 0.5vw;
+    margin-top: 1vh;
+    font-size: 1.06rem;
+}
+
+.line-column {
+    font-weight: bold;
+}
 
 /* ======> SETTINGS FOR CELLPHONES <====== */
 @media screen and (max-device-width:800px) {
@@ -62,4 +82,48 @@
         margin: 0 2vw;
         width: 90vw;
     }
+}
+
+.drawing-variable-bg, .drawing-lambda-bg, .drawing-non-redex-app-bg {
+    fill: var(--default-drawing-background);
+    stroke: var(--default-drawing-border);
+}
+
+.drawing-redex-app-bg {
+    fill: var(--redex-drawing-background);
+    stroke: var(--redex-drawing-border);
+}
+
+.drawing-variable-text {
+    fill: var(--drawing-variable-color);
+    font-weight: var(--drawing-variable-weight);
+}
+
+.drawing-lambda-text {
+    fill: var(--drawing-lambda-color);
+    font-weight: var(--drawing-lambda-weight);
+}
+
+.drawing-non-redex-app-text {
+    fill: var(--drawing-non-redex-at-color);
+    font-weight: var(--drawing-non-redex-weight);
+}
+
+.drawing-redex-app-text {
+    fill: var(--drawing-redex-at-color);
+    font-weight: var(--drawing-redex-weight);
+}
+
+.drawing-lambda-line, .drawing-redex-app-line, .drawing-non-redex-app-line {
+    stroke: var(--drawing-line-color);
+}
+
+.drawing-redex-app-text, .drawing-redex-app-bg {
+    cursor: pointer;
+}
+
+/* TEXTAREA FOR CODE */
+.code-textarea {
+    margin: 0 0;
+    background: transparent;
 }

@@ -8,6 +8,13 @@
     --textarea-background: transparent;
     --register-lighter-background: #DDC6C6;
 
+    /* Drawing Backgrounds */
+    --full-drawing-background: #282828;
+    --default-drawing-background: #40403d;
+    --default-drawing-border: transparent;
+    --redex-drawing-background: #40403d;
+    --redex-drawing-border: #6E95E9;
+
     /* Colors */
     --header-font-color: #EBEBE3;
     --main-font-color: #EBEBE3;
@@ -17,11 +24,23 @@
     --textarea-scrollbar: #4A4A48;
     --code-font-color: rgba(0, 0, 0, 0);
     --code-reserved-words: #F84B3C;
-    --code-built-in-funcs: #F9BC41;
-    --code-label-color: #8FBF7F;
+    --code-punctuation: #8FBF7F;
+    --code-numbers: #F9BC41;
     --code-background-color: #282828;
+    --code-comment-color: #a0a0a0;
     --error-font-color: #FF7676;
     --highlight-color: #D2C656;
+
+    /* Drawing Text */
+    --drawing-lambda-color: #6DDA8C;
+    --drawing-variable-color: #E2F985;
+    --drawing-non-redex-at-color: #F29D52;
+    --drawing-redex-at-color: #F76A6A;
+    --drawing-line-color: #B2B2AF;
+    --drawing-lambda-weight: normal;
+    --drawing-variable-weight: normal;
+    --drawing-non-redex-weight: bold;
+    --drawing-redex-weight: bold;
 
     /* General colors */
     --dark-color: #121212;
@@ -35,6 +54,13 @@
     --textarea-background: transparent;
     --register-lighter-background: #DCD3E7;
 
+    /* Drawing Backgrounds */
+    --full-drawing-background: #FBF2D1;
+    --default-drawing-background: #FAF5F1;
+    --default-drawing-border: #B9A1D8;
+    --redex-drawing-background: #EDF2FC;
+    --redex-drawing-border: #6E95E9;
+
     /* Colors */
     --header-font-color: #F5F5F5;
     --main-font-color: #121212;
@@ -44,11 +70,23 @@
     --textarea-scrollbar: #EAD0B7;
     --code-font-color: rgba(0, 0, 0, 0);
     --code-reserved-words: #9B0511;
-    --code-built-in-funcs: #B47523;
-    --code-label-color: #447A59;
+    --code-punctuation: #447A59;
+    --code-numbers: #B47523;
     --code-background-color: #FBF2D1;
+    --code-comment-color: #585858;
     --error-font-color: #FF5977;
     --highlight-color: #B9A1D8;
+
+    /* Drawing Text */
+    --drawing-lambda-color: #39B55C;
+    --drawing-variable-color: #A3AFDA;
+    --drawing-non-redex-at-color: #E8991A;
+    --drawing-redex-at-color: #CB1111;
+    --drawing-line-color: #B9A1D8;
+    --drawing-lambda-weight: normal;
+    --drawing-variable-weight: bold;
+    --drawing-non-redex-weight: bold;
+    --drawing-redex-weight: bold;
 }
 
 
@@ -161,9 +199,6 @@ input:checked + .slider > span {
 
 
 /* TEXTAREA FOR CODE*/
-.code-highlight {
-    font-size: 1.06rem;
-}
 
 .code-textarea {
     font-size: 1.06rem;
@@ -176,6 +211,7 @@ input:checked + .slider > span {
     color: var(--code-font-color);
     background: var(--textarea-background);
     caret-color: var(--main-font-color);
+    overflow-y: scroll;
 }
 
 .code-textarea::-webkit-scrollbar {
@@ -189,13 +225,16 @@ input:checked + .slider > span {
 }
 
 .highlighting {
+    font-size: 1.06rem;
     width: 56vw;
     height: 40vh;
     max-height: 40vh;
     margin: 0;
+    padding: 10px;
     white-space: pre-wrap; 
     word-wrap: break-word;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: scroll;
 }
 
 .front {
@@ -205,23 +244,31 @@ input:checked + .slider > span {
 
 .behind {
     position: absolute;
-    margin: 0 2vw;
-    padding: 10px;
+    margin: 0 0;
     background-clip: padding-box;
     background-color: var(--code-background-color);
     z-index: 0;
 }
 
-.label {
-    color: var(--code-label-color);
+.selected-bracket {
+    text-decoration: underline;
+    font-weight: bold;
+}
+
+.punctuation {
+    color: var(--code-punctuation);
 }
 
 .reserved {
     color: var(--code-reserved-words);
 }
 
-.builtin {
-    color: var(--code-built-in-funcs);
+.number {
+    color: var(--code-numbers);
+}
+
+.comment {
+    color: var(--code-comment-color);
 }
 
 /* LOG AND EXECUTION AREA */
