@@ -25,7 +25,14 @@ export function clearSvg(targetSvg) {
  * left: 40                                 // margem à esquerda
  * minCenter: 0                             // posição mínima do centro
  * minLeafDistance: 20                      // distância mínima entre nodos folhas
- * onredexclick: term => console.log(term)  // evento disparado ao clicar em redexes
+ *
+ * // evento disparado ao clicar em redexes
+ * //
+ * // Função recebe três argumentos: o termo em questão, o termo pai
+ * // (pode ser nulo), e o atributo usado no termo pai (só presente se o pai,
+ * // está presente).
+ * onredexclick: (term, parent, attribute) => console.log(term, parent, attribute)  
+ *
  * variable.node.radius: 14                 // raio mínimo do contorno dos nodos de variáveis
  * variable.node.textPadding: 5             // espaçamento ao redor do texto de nodos de variáveis
  * variable.node.fillColor: '#ffffff'       // cor de preenchimento do fundo de nodos de variáveis
@@ -58,7 +65,7 @@ export function clearSvg(targetSvg) {
  */
 export function drawTerm(term, targetSvg, configChanges) {
     clearSvg(targetSvg);
-    drawTermWith(term, targetSvg, new Config(configChanges));
+    drawTermWith(term, targetSvg, new Config(configChanges), null, undefined);
 }
 
 
@@ -197,13 +204,13 @@ function createSvgElem(name) {
 /**
  * Desenha um termo lambda dada uma config já ajustada.
  */
-function drawTermWith(term, targetSvg, config) {
+function drawTermWith(term, targetSvg, config, parent, parentAttr) {
     if (isVariable(term)) {
         return drawVariable(term, targetSvg, config);
     }
 
     if (isApplication(term)) {
-        return drawApplication(term, targetSvg, config);
+        return drawApplication(term, targetSvg, config, parent, parentAttr);
     }
 
     if (isLambda(term)) {
@@ -272,7 +279,7 @@ function drawLambda(term, targetSvg, config) {
     );
     let bgNode = createBg(textNode, targetSvg, 'lambda', config.lambda.node);
     
-    let childPos = drawLambdaBody(term.body, bgNode, targetSvg, config);
+    let childPos = drawLambdaBody(term, bgNode, targetSvg, config);
     let newConfig = drawLambdaNode(
         textNode,
         bgNode,
@@ -294,13 +301,13 @@ function drawLambda(term, targetSvg, config) {
  * parâmetro do lambda. `term` já é o próprio corpo. Retorna a posição do
  * filho (ver classe `Position`).
  */
-function drawLambdaBody(term, bgNode, targetSvg, config) {
+function drawLambdaBody(lambda, bgNode, targetSvg, config) {
     let childConfig = config.clone();
     childConfig.setMinCenter(
         config.symmetricCenter(svgWidth(bgNode, targetSvg))
     );
     childConfig.top += config.levelHeight('lambda');
-    return drawTermWith(term, targetSvg, childConfig);
+    return drawTermWith(lambda.body, targetSvg, childConfig, lambda, 'body');
 }
 
 /**
@@ -333,7 +340,7 @@ function drawLambdaLine(position, targetSvg, config) {
 /**
  * Desenha um termo do tipo aplicação na imagem.
  */
-function drawApplication(term, targetSvg, config) {
+function drawApplication(term, targetSvg, config, parent, parentAttr) {
     let isRedex = isLambda(term.function);
     let configName, nodeClass;
     if (isRedex) {
@@ -357,12 +364,13 @@ function drawApplication(term, targetSvg, config) {
     );
 
     if (isRedex) {
-        textNode.addEventListener('click', () => config.onredexclick(term));
-        bgNode.addEventListener('click', () => config.onredexclick(term));
+        const callback = () => config.onredexclick(term, parent, parentAttr);
+        textNode.addEventListener('click', callback);
+        bgNode.addEventListener('click', callback);
     }
 
     let leftChildPos = drawAppFunction(
-        term.function,
+        term,
         bgNode,
         targetSvg,
         configName,
@@ -370,7 +378,7 @@ function drawApplication(term, targetSvg, config) {
     );
 
     let rightChildPos = drawAppArgument(
-        term.argument,
+        term,
         bgNode,
         leftChildPos,
         targetSvg,
@@ -409,14 +417,20 @@ function drawApplication(term, targetSvg, config) {
  * é ou 'redexApp' ou 'nonRedexApp'. Retorna a posição do filho
  * (ver classe `Position`).
  */
-function drawAppFunction(term, bgNode, targetSvg, configName, config) {
+function drawAppFunction(app, bgNode, targetSvg, configName, config) {
     let leftChildConfig = config.clone();
     leftChildConfig.setMinCenter(
         config.symmetricCenter(svgWidth(bgNode, targetSvg))
         - config.minLeafDistance / 2
     );
     leftChildConfig.top += config.levelHeight(configName);
-    return drawTermWith(term, targetSvg, leftChildConfig);
+    return drawTermWith(
+        app.function,
+        targetSvg,
+        leftChildConfig,
+        app,
+        'function'
+    );
 }
 
 /**
@@ -426,7 +440,7 @@ function drawAppFunction(term, bgNode, targetSvg, configName, config) {
  * (ver classe `Position`).
  */
 function drawAppArgument(
-    term,
+    app,
     bgNode,
     leftChildPos,
     targetSvg,
@@ -437,7 +451,13 @@ function drawAppArgument(
     rightChildConfig.left = leftChildPos.right + config.minLeafDistance;
     rightChildConfig.setMinCenter(rightChildConfig.left);
     rightChildConfig.top += config.levelHeight(configName);
-    return drawTermWith(term, targetSvg, rightChildConfig);
+    return drawTermWith(
+        app.argument,
+        targetSvg,
+        rightChildConfig,
+        app,
+        'argument'
+    );
 }
 
 /**
@@ -655,7 +675,7 @@ class Config {
             left: 40,
             minCenter: 0,
             minLeafDistance: 20,
-            onredexclick: term => console.log(term),
+            onredexclick: console.log,
         });
         this.variable = {
             node: NodeConfig.defaultForVar(
