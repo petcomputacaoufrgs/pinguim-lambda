@@ -70,8 +70,6 @@ export const init = (() => {
     };
 })();
 
-const storageKey = "pinguim.lambda.userCode";
-
 const storagePrefix = "pinguim.lambda";
 const storageCodeKey = storagePrefix + '.userCode';
 const storageCodeHistKey = storagePrefix + '.userCodeHistory';
