@@ -6,6 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link rel="preconnect" href="https://fonts.gstatic.com">
 		<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300&display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 		<title> Cálculo Lambda </title>
 	</head>
 
@@ -15,7 +16,9 @@
 		<!-- Theme switch -->
 		<label class="theme-switch" for="checkbox">
 			<input type="checkbox" id="checkbox" hidden/>
-			<div class="slider round"></div>
+			<div class="slider round">
+				<span id="toggle-icon" class="material-icons">light_mode</span>
+            </div>
 		</label>
 
 		<div class="download-and-upload-area">
@@ -38,7 +41,20 @@
 
 		<div class="flex-box">
 			<div class="coding-area">
-				<textarea class="code-textarea"></textarea>
+                <div class="coding-input">
+                    <!-- Original code -->
+                    <div class="front">
+                        <textarea id="userinput" class="code-textarea" spellcheck="false"></textarea>
+						<div class="line-column-area">
+							Linha: <span class="line-column" id="input-line"></span>,
+							Coluna: <span class="line-column" id="input-column"></span>
+						</div>
+                    </div>
+                    <!-- Highlighted code -->
+                    <div class="behind">
+                        <pre id="codeediting" class="highlighting"></pre>
+                    </div>
+                </div>
 				<div class="log-and-execution-area">
 					<div class="log-area">
 						<h2>Log</h2>
@@ -54,6 +70,9 @@
 	
 			<div class="tree-visualization">
 				<h2>Visão como árvore</h2>
+                <div id="tree-wrapper">
+                    <svg id="tree"></svg>
+                </div>
 			</div>
 		</div>
 
