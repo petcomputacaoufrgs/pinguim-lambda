@@ -214,16 +214,6 @@ input:checked + .slider > span {
     overflow-y: scroll;
 }
 
-.code-textarea::-webkit-scrollbar {
-    width: 0.5rem;
-    background-color: var(--textarea-background);
-}
-
-.code-textarea::-webkit-scrollbar-thumb {
-    border-radius: 1rem;
-    background-color: var(--textarea-scrollbar);
-}
-
 .highlighting {
     font-size: 1.06rem;
     width: 56vw;
