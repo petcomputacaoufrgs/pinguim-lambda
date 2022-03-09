@@ -1,4 +1,4 @@
-use crate::compiler::position::Span;
+use pinguim_language::position::Span;
 
 // <program> ::=
 //      | <let> <bindings> <in> <expr>

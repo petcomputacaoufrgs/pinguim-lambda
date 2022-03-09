@@ -4,11 +4,14 @@ mod test;
 pub mod error;
 pub mod token;
 
-use super::error::{Diagnostics, Error};
 use error::{BadCommentStart, InvalidChar};
-use crate::compiler::position::Span;
 use std::{error::Error as StdError, iter::Peekable, str};
 use token::{Token, TokenType};
+
+use pinguim_language::{
+    error::{Diagnostics, Error},
+    position::Span,
+};
 
 pub fn generate_tokens(
     source: &str,
@@ -20,7 +23,6 @@ pub fn generate_tokens(
     while let Some(token) = lexer.generate_token(diagnostics) {
         tokens.push(token);
     }
-    
     tokens
 }
 
@@ -59,7 +61,7 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    fn try_generate_token (
+    fn try_generate_token(
         &mut self,
         diagnostics: &mut Diagnostics,
     ) -> Result<Token, Failure> {
@@ -77,7 +79,7 @@ impl<'src> Lexer<'src> {
                     self.next_char();
                     self.raise(diagnostics, InvalidChar { character });
                     Err(Failure::TryAgain)
-                },
+                }
                 None => Err(Failure::EndOfInput),
             }
         }
@@ -95,12 +97,9 @@ impl<'src> Lexer<'src> {
         self.token_span.finish();
     }
 
-    fn skip_discardable(
-        &mut self,
-        diagnostics: &mut Diagnostics,
-    ) {
+    fn skip_discardable(&mut self, diagnostics: &mut Diagnostics) {
         while self.skip_whitespace() || self.skip_comment(diagnostics) {}
-    } 
+    }
 
     fn skip_whitespace(&mut self) -> bool {
         let mut skipped = false;
@@ -111,10 +110,7 @@ impl<'src> Lexer<'src> {
         skipped
     }
 
-    fn skip_comment(
-        &mut self,
-        diagnostics: &mut Diagnostics,
-    ) -> bool {
+    fn skip_comment(&mut self, diagnostics: &mut Diagnostics) -> bool {
         if self.is_comment_start() {
             self.clear_current();
             self.next_char();
@@ -138,7 +134,6 @@ impl<'src> Lexer<'src> {
             only_number = only_number && self.is_number();
             self.next_char();
         }
-        
         let token_type = if only_number {
             TokenType::Number
         } else if let Some(keyword) = self.match_keyword() {
@@ -146,7 +141,6 @@ impl<'src> Lexer<'src> {
         } else {
             TokenType::Identifier
         };
-        
         self.make_token(token_type)
     }
 
@@ -206,7 +200,7 @@ impl<'src> Lexer<'src> {
         diagnostics.raise(Error::new(cause, self.token_span));
     }
 
-    fn match_keyword(&self) ->  Option<TokenType> {
+    fn match_keyword(&self) -> Option<TokenType> {
         match self.token_content.as_str() {
             "let" => Some(TokenType::Let),
             "in" => Some(TokenType::In),
@@ -224,9 +218,8 @@ impl<'src> Lexer<'src> {
                 '\\' => Some(TokenType::Lambda),
                 ';' => Some(TokenType::Semicolon),
                 _ => None,
-            }
+            },
             _ => None,
         }
     }
-
 }
