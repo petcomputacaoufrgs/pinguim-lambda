@@ -4,13 +4,13 @@ mod test;
 pub mod ast;
 pub mod error;
 
-use super::error::{Diagnostics, Error};
 use crate::compiler::lexer::token::{Token, TokenType};
 use ast::{Binding, Expr, Program, Symbol};
 use error::{
     EmptyExpression, LambdaWithoutParams, UnexpectedEndOfInput,
     UnexpectedToken, UnmatchedCloseParen, UnmatchedOpenParen,
 };
+use pinguim_language::error::{Diagnostics, Error};
 
 /// Cria uma estrutura Parser e parsa a lista de tokens para um programa
 ///

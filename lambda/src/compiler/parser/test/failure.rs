@@ -1,6 +1,6 @@
 use crate::compiler::lexer::generate_tokens;
 use crate::compiler::parser::{ast, parse};
-use crate::compiler::{
+use pinguim_language::{
     error::Diagnostics,
     position::{Position, Span},
 };

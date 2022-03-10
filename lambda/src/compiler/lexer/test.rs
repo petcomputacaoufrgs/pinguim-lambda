@@ -1,14 +1,11 @@
 use super::{
-    super::{
-        error::Diagnostics,
-        position::{Position, Span},
-    },
     generate_tokens,
     token::{Token, TokenType},
 };
-
-use std::fs::File;
-use std::io::Write;
+use pinguim_language::{
+    error::Diagnostics,
+    position::{Position, Span},
+};
 
 #[test]
 fn empty_src() {

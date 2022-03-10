@@ -1,4 +1,4 @@
-use crate::compiler::position::Span;
+use pinguim_language::position::Span;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -13,7 +13,7 @@ pub enum TokenType {
     Dot,
     OpenParen,
     CloseParen,
-    Semicolon
+    Semicolon,
 }
 
 impl fmt::Display for TokenType {
@@ -21,7 +21,7 @@ impl fmt::Display for TokenType {
         match self {
             TokenType::Lambda => {
                 write!(formatter, "\\")
-            },  
+            }
             TokenType::Identifier => write!(formatter, "<identificador>"),
             TokenType::Number => write!(formatter, "<número>"),
             TokenType::Equal => write!(formatter, "="),

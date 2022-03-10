@@ -7,3 +7,4 @@ workspace = "../"
 
 [dependencies]
 indexmap = "1.7.0"
+pinguim-language = {git = "https://github.com/petcomputacaoufrgs/pinguim-language"}
