@@ -85,7 +85,7 @@ pub enum Value {
 }
 
 impl Value {
-    fn dummy() -> Self {
+    pub fn dummy() -> Self {
         Value::Variable(String::new())
     }
 
@@ -100,7 +100,7 @@ impl Value {
     ///       body m = Application (Variable "f") (body (m - 1))
     ///   in Lambda "f" (Lambda "x" (body n))
     /// ```
-    pub fn church_numeral(number: u32) -> Self {
+    pub fn church_numeral(number: u64) -> Self {
         let mut body = Value::Variable(String::from("x"));
 
         for _ in 0..number {
