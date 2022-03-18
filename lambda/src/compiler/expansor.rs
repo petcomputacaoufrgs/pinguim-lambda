@@ -1,6 +1,9 @@
+#[cfg(test)]
+mod test;
+
 use crate::compiler::parser::ast;
 use crate::value::{NestedValue, Value};
-use pinguim_language::error::{Diagnostics, Error};
+use pinguim_language::error::Diagnostics;
 
 pub fn expand(
     ast: &ast::Program,
@@ -9,7 +12,7 @@ pub fn expand(
     Expansor::new(ast).expand_program(diagnostics)
 }
 
-pub struct Expansor<'ast> {
+struct Expansor<'ast> {
     ast: &'ast ast::Program,
     expression: Value,
 }
@@ -52,13 +55,13 @@ impl<'ast> Expansor<'ast> {
         &mut self,
         diagnostics: &mut Diagnostics,
     ) -> Option<Value> {
-        let mut main = self.ast.main_expression.clone();
-        let mut bindings = self.ast.bindings.clone();
+        let main = self.ast.main_expression.clone();
+        let bindings = self.ast.bindings.clone();
 
         self.expression = self.expr_to_value(main, diagnostics);
 
         for binding in bindings {
-            let mut binding_value =
+            let binding_value =
                 self.expr_to_value(binding.expression, diagnostics);
             self.expression.replace(&binding.name.content, &binding_value);
         }
