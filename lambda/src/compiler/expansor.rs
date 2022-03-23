@@ -60,7 +60,7 @@ impl<'ast> Expansor<'ast> {
 
         self.expression = self.expr_to_value(main, diagnostics);
 
-        for binding in bindings {
+        for binding in bindings.into_iter().rev() {
             let binding_value =
                 self.expr_to_value(binding.expression, diagnostics);
             self.expression.replace(&binding.name.content, &binding_value);
